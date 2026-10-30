@@ -1,10 +1,14 @@
-# Phase 3: Project Reclaimer servers
+# Phase 3: server browsers
+
+Project Reclaimer first; Reach Renaissance is at the end.
+
+## Project Reclaimer
 
 Found 2026-10-30 from the game's settings screen (Server discovery and
 Stats service), its exe's own text, and its website. Only read-only
 requests were made.
 
-## Live server list: discovery masters
+### Live server list: discovery masters
 
 The game's default masters (Settings > Server discovery):
 
@@ -25,7 +29,7 @@ http://23.159.176.140:49175
 
 The launcher already uses this for its server count (`internal/discovery`).
 
-## Names and recent games: stats service
+### Names and recent games: stats service
 
 `http://148.251.153.44:8790` (Settings > Stats service). Paths from the
 exe: `/health`, `/v1/servers`, `/v1/servers/{id}`, `/v1/matches`,
@@ -40,7 +44,7 @@ exe: `/health`, `/v1/servers`, `/v1/servers/{id}`, `/v1/matches`,
   No server address.
 - `GET /v1/servers/{id}` with a key gave 404 (id format unknown).
 
-## Per-server details: status query (QUIC + framed JSON)
+### Per-server details: status query (QUIC + framed JSON)
 
 The in-game browser asks each server itself for its name, map and players
 (Settings > "Server query batch size"). Worked out on 2026-10-30 from a
@@ -75,7 +79,7 @@ it**. Joining is left to the game (below).
 
 Implemented in `internal/servers` (`Querier.Query`, `Querier.Browse`).
 
-## Joining
+### Joining
 
 The game registers a link handler when it starts:
 `HKCU\Software\Classes\reclaimer` -> `"<client exe>" "%1"`. Its website's
@@ -87,3 +91,44 @@ link over itself (exe text: "The running game joins …"; "The running game
 did not take the join link; starting another.").
 
 The game also has Direct Connect (type `host:port`) in its own browser.
+
+## Reach Renaissance
+
+Found 2026-10-30 from its release's own files (`themes\classic\*.js` are
+plain JavaScript) and its helpers' exe text. Only read-only requests.
+
+### Server list: one master, everything in it
+
+Default master (in `bin\rr-browser.exe`): `https://2-29-30-1.sslip.io:11700`.
+`GET /v1/peers` returned `[]`, so it is the only one.
+
+`GET /v1/servers` returns `{"protocol":2,"total":N,"servers":[...]}`, each:
+
+```json
+{"id":"5b1830464d879152","address":"keya97daa62a201b286","last_seen_seconds":21,
+ "reachable":null,"udp_seen_seconds":6,"host_rtt_ms":40,
+ "signed":{"listing":{"protocol":2,"port":40013,"name":"Rabid Mods Covenant","host_name":"Server",
+   "kind":"multiplayer","map":"forge_halo_modded","gametype":"RCC Onslaught v20","players":0,
+   "max_players":20,"max_ping":0,"password":false,"region":"Local","client_version":"0.1.28",
+   "build":"2025.08.16.178512.1-Release","dll_sha256":"…","mock":false,
+   "mods":[{"workshop_id":3590252347,"title":"…","version":"0.0.0"}],"map_variant":"ONS: Broken Windows"},
+  "issued_unix":1793402178,"public_key":"…","signature":"…","privacy":"…","details":"…"}}
+```
+
+Unlike Reclaimer, no per-server query is needed: the master carries the
+host's signed listing. `address` is a key, not an IP: hosts are reached
+through the master. `host_rtt_ms` is the master's round trip to the host,
+not the player's ping. `kind` is `multiplayer`, `forge`, `campaign` or
+`firefight` (the game's browser filters on it). 10 games were listed.
+
+The game's browser gets this through `rr-browser serve` (local
+`GET /api/servers`, which adds compatibility and ping) rather than directly.
+
+### Joining: no outside way found
+
+The game's menu posts `join:<id or address>|<masters>` to its own launcher
+program (`Reach Renaissance.exe`), which starts its helpers with
+`--join {id}`. That is internal: no URL scheme is registered, the README
+documents no command line, and the exe's `--join`, `--browse`, `--follow`
+strings are arguments it builds for its own helpers. Whether
+`Reach Renaissance.exe --join <id>` from outside works is untested.
