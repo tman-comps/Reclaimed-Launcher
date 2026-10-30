@@ -44,3 +44,27 @@ func TestBuildMasksAndSkipsLogs(t *testing.T) {
 		t.Error("report leaked data")
 	}
 }
+
+// Reach Renaissance keeps a WebView2 profile in its game folder; it used to
+// use up the file limit. READMEs read as key=value noise.
+func TestBuildSkipsBrowserCacheAndDocs(t *testing.T) {
+	src := t.TempDir()
+	os.MkdirAll(filepath.Join(src, "bin", "menu-overlay.exe.WebView2", "EBWebView"), 0o755)
+	os.WriteFile(filepath.Join(src, "bin", "menu-overlay.exe.WebView2", "EBWebView", "Local State"), []byte(`{"a":1}`), 0o644)
+	os.WriteFile(filepath.Join(src, "README.txt"), []byte("Reach Renaissance\nWhat you need = a PC\n"), 0o644)
+	os.WriteFile(filepath.Join(src, "profile.json"), []byte(`{"public_key":[1]}`), 0o644)
+	out, err := Build(t.TempDir(), []Target{{"Test", src}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(out)
+	s := string(b)
+	for _, want := range []string{"menu-overlay.exe.WebView2/  (skipped: 1", "README.txt  [documentation", "   public_key[0] = 1"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("report missing %q:\n%s", want, s)
+		}
+	}
+	if strings.Contains(s, "Local State") || strings.Contains(s, "What you need") {
+		t.Errorf("report should skip the browser cache and README:\n%s", s)
+	}
+}

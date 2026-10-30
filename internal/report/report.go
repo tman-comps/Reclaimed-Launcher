@@ -33,7 +33,17 @@ const (
 // skipDirs hold logs or crash data, not settings. They are counted, not listed.
 var skipDirs = map[string]bool{"runs": true, "logs": true, "crashes": true, "crashdumps": true, "cache": true, "screenshots": true}
 
-var settingHint = regexp.MustCompile(`(?i)(fov|field.?of.?view|sens|mouse|resolution|width|height|fullscreen|window|vsync|fps|frame|refresh|volume|audio|sound|music|bind|key|input|controller|gamepad|bright|gamma|quality)`)
+var settingHint = regexp.MustCompile(`(?i)(fov|field.?of.?view|sens|mouse|resolution|width|height|fullscreen|window|vsync|fps|frame|refresh|volume|audio|sound|music|bind|keyboard|hotkey|input|controller|gamepad|bright|gamma|quality)`)
+
+// skipDir reports folders that hold logs, caches or an embedded browser's
+// profile (Reach Renaissance keeps one in bin\*.WebView2), not settings.
+func skipDir(name string) bool {
+	n := strings.ToLower(name)
+	return skipDirs[n] || strings.HasSuffix(n, ".webview2") || n == "ebwebview"
+}
+
+// docFile reports files that are the game's documentation, not settings.
+var docFile = regexp.MustCompile(`(?i)^(readme|license|licence|changelog|changes)([-_.].*)?\.(txt|md)$`)
 var secretKey = regexp.MustCompile(`(?i)(token|secret|password|passwd|auth|session|cookie|private|signature|xuid|steamid|email)`)
 var ipLike = regexp.MustCompile(`\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
 
@@ -71,7 +81,7 @@ func scan(b *strings.Builder, root string) {
 		}
 		depth := strings.Count(p, "/") + 1
 		if d.IsDir() {
-			if skipDirs[strings.ToLower(d.Name())] {
+			if skipDir(d.Name()) {
 				cnt := 0
 				fs.WalkDir(os.DirFS(filepath.Join(root, p)), ".", func(_ string, e fs.DirEntry, _ error) error {
 					if e != nil && !e.IsDir() {
@@ -95,6 +105,10 @@ func scan(b *strings.Builder, root string) {
 		size, mod := int64(0), time.Time{}
 		if info != nil {
 			size, mod = info.Size(), info.ModTime()
+		}
+		if docFile.MatchString(d.Name()) {
+			fmt.Fprintf(b, "\n  %s  [documentation, not read, %d bytes]\n", p, size)
+			return nil
 		}
 		full := filepath.Join(root, filepath.FromSlash(p))
 		var data []byte
