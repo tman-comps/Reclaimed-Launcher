@@ -42,7 +42,10 @@ See README.md for the folder layout, update-conflict rules, and code map.
   runs or if the file changed since loading, unknown keys kept, backup to
   `data\backups\<game>\` first. Reclaimer's FOV uses Reach's list (70-120) and its frame
   limit 30-240 without "unlimited" (its encoding is unknown); the owner doesn't want mouse
-  sensitivity/smoothing on the page. Settings sync between the games is NOT started.
+  sensitivity/smoothing on the page. Sync (Game settings > Sync, `internal/settings/sync.go`)
+  is compare-and-copy, the owner's choice: six shared settings side by side, copied per row
+  or all at once in either direction, each copy an ordinary save. Nothing syncs on its
+  own. A real copy hasn't been tried yet.
   (Settings > "Export settings report" writes a read-only, masked report to `reports\`.) Writes must: back up first, refuse while the
   game runs, validate the format, and stop on unknown formats.
 - Phase 3 (server browser + join) is blocked until the game devs document a server-info

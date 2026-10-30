@@ -133,8 +133,13 @@ Not synced:
 - Graphics quality, gamma, subtitles and the other volumes exist in only
   one of the games.
 
-A sync is just two ordinary saves, with every save rule (refused while that
-game runs, backup first, unknown keys kept).
+Built as Settings > Game settings > Sync (`internal/settings/sync.go`): the
+rows above side by side, copied one at a time or all at once, in either
+direction, only when clicked. A copy is an ordinary save of the other game,
+with every save rule (refused while that game runs, backup first, unknown
+keys kept). Values the other game lacks (Reach's unlimited frame rate,
+Reclaimer's exclusive fullscreen) can't be copied and are left out of "Copy
+all".
 
 Both settings pages are built in `internal/settings` as described above.
 

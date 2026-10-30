@@ -153,8 +153,10 @@ node frontend/dev/preview.js <screenshot-dir>
 ## Roadmap
 
 - **Phase 2: settings.** Settings > Game settings edits each game's video, graphics,
-  mouse and audio settings (formats in `docs/settings-formats.md`). Syncing
-  settings between the games comes next.
+  mouse and audio settings (formats in `docs/settings-formats.md`). Its Sync tab
+  compares the six settings both games share (field of view, vehicle field of
+  view, frame limit, v-sync, window mode, volume) and copies them either way,
+  only when you click.
 - **Phase 3: server browser and join.** Blocked until each game documents a
   server-info query and a join method. Add `servers.Source`/`servers.Joiner`
   implementations and the Servers page will use them.

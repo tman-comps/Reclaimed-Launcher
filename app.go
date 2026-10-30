@@ -406,6 +406,53 @@ func (a *App) SaveGameSettings(id, stamp string, changes map[string]string) (Set
 	return SettingsSaved{Page: p, Backup: backup}, nil
 }
 
+// SettingsCompare lines up the settings both games share.
+type SettingsCompare struct {
+	Rows  []settings.SyncRow `json:"rows"`
+	Error string             `json:"error,omitempty"`
+}
+
+func (a *App) bothPages() (settings.Page, settings.Page) {
+	r, _ := a.GameSettings("reclaimer")
+	b, _ := a.GameSettings("reach-renaissance")
+	return r, b
+}
+
+// CompareSettings reads both games' settings and compares the shared ones.
+func (a *App) CompareSettings() SettingsCompare {
+	r, b := a.bothPages()
+	for _, p := range []settings.Page{r, b} {
+		if p.Error != "" {
+			return SettingsCompare{Error: games.ByID(p.Game).Name + ": " + p.Error}
+		}
+	}
+	return SettingsCompare{Rows: settings.Compare(r, b)}
+}
+
+// CopySettings copies shared settings (all that differ when keys is empty)
+// from one game to the other, as one ordinary save of the other game.
+func (a *App) CopySettings(from, to string, keys []string) (SettingsSaved, error) {
+	if from == to {
+		return SettingsSaved{}, errors.New("pick two different games")
+	}
+	pages := map[string]settings.Page{}
+	pages["reclaimer"], pages["reach-renaissance"] = a.bothPages()
+	src, ok1 := pages[from]
+	dst, ok2 := pages[to]
+	if !ok1 || !ok2 {
+		return SettingsSaved{}, errors.New("unknown game")
+	}
+	changes, err := settings.CopyChanges(src, dst, keys)
+	if err != nil {
+		return SettingsSaved{}, err
+	}
+	if len(changes) == 0 {
+		return SettingsSaved{Page: dst}, nil
+	}
+	runtime.LogInfof(a.ctx, "settings: copying %d setting(s) from %s to %s", len(changes), from, to)
+	return a.SaveGameSettings(to, dst.Stamp, changes)
+}
+
 // OpenSettingsBackups opens the folder holding a game's settings backups.
 func (a *App) OpenSettingsBackups(id string) error {
 	if _, err := a.settingsGame(id); err != nil {

@@ -389,9 +389,11 @@ function gsRender() {
   if (!gs.el) return;
   const id = gs.id, p = gs.pages[id], edits = gs.edits[id] || {};
   const g = snap?.games.find((x) => x.id === id);
-  const tabs = (snap?.games || []).map((x) => `<button class="btn small${x.id === id ? " on" : ""}" data-act="gs-tab" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join("");
+  const tabs = [...(snap?.games || []), { id: "sync", name: "Sync" }].map((x) => `<button class="btn small${x.id === id ? " on" : ""}" data-act="gs-tab" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join("");
   let body;
-  if (!p) {
+  if (id === "sync") {
+    body = gsSyncBody();
+  } else if (!p) {
     body = `<p class="muted">Loading…</p>`;
     gsLoad(id);
   } else if (p.error) {
@@ -452,6 +454,63 @@ function gsChange(key, v) {
   gsRender();
 }
 
+// ---- Sync: the settings both games share, side by side, copied either way.
+async function gsLoadCompare() {
+  if (gs.loading.sync) return;
+  gs.loading.sync = true;
+  try {
+    gs.compare = await call("CompareSettings").catch(() => ({ error: "Couldn't read the settings." }));
+  } finally {
+    gs.loading.sync = false;
+  }
+  if (gs.id === "sync") gsRender();
+}
+
+function gsSyncBody() {
+  const c = gs.compare;
+  if (!c) { gsLoadCompare(); return `<p class="muted">Loading…</p>`; }
+  if (c.error) return `<p>${esc(c.error)}</p><div class="row" style="margin-top:12px"><button class="btn small" data-act="gs-sync-reload">Check again</button></div>`;
+  const [a, b] = (snap?.games || []).map((g) => g.id), name = (id) => snap.games.find((g) => g.id === id)?.name ?? id;
+  const busy = gs.saving, blocked = (to) => busy || gs.running[to];
+  const copyBtn = (r, from, to, arrow) => {
+    const s = r.sides[from], off = r.same || !s.canCopy || blocked(to);
+    const title = r.same ? "Already the same" : !s.canCopy ? `Can't copy: ${s.note}` : gs.running[to] ? `Close ${name(to)} first` : `Copy ${name(from)}'s ${s.label} to ${name(to)}`;
+    return `<button class="btn small" data-act="gs-copy" data-from="${esc(from)}" data-to="${esc(to)}" data-key="${esc(r.key)}" title="${esc(title)}"${off ? " disabled" : ""}>${arrow}</button>`;
+  };
+  const copyable = (from) => c.rows.some((r) => !r.same && r.sides[from].canCopy);
+  const allBtn = (from, to) => `<button class="btn small" data-act="gs-copy" data-from="${esc(from)}" data-to="${esc(to)}"${!copyable(from) || blocked(to) ? " disabled" : ""}>Copy all to ${esc(name(to))}</button>`;
+  const n = c.rows.filter((r) => !r.same).length;
+  const running = [a, b].filter((id) => gs.running[id]);
+  return `<p>${n ? `${n} of ${c.rows.length} shared settings differ.` : `All ${c.rows.length} shared settings match.`} Copying saves straight away, with a backup first. Resolution and mouse sensitivity work differently in each game, so they aren't synced.</p>
+    <div class="gs-sync">
+      <div class="h"></div><div class="h">${esc(name(a))}</div><div class="h"></div><div class="h">${esc(name(b))}</div>
+      ${c.rows.map((r) => `
+        <div>${esc(r.label)}</div>
+        <div class="${r.same ? "" : "diff"}" title="${esc(r.sides[a].note || "")}">${esc(r.sides[a].label)}</div>
+        <div class="arrows">${copyBtn(r, a, b, "→")}${copyBtn(r, b, a, "←")}</div>
+        <div class="${r.same ? "" : "diff"}" title="${esc(r.sides[b].note || "")}">${esc(r.sides[b].label)}</div>`).join("")}
+    </div>
+    ${running.map((id) => `<p class="gs-warn">${esc(name(id))} is running. Close it to copy settings to it.</p>`).join("")}
+    <div class="row" style="margin-top:16px">${allBtn(a, b)}${allBtn(b, a)}<button class="btn small" data-act="gs-sync-reload">Reload</button></div>`;
+}
+
+async function gsCopy(from, to, key) {
+  const name = (id) => snap.games.find((g) => g.id === id)?.name ?? id;
+  if (Object.keys(gs.edits[to] || {}).length && !confirm(`You have unsaved changes on ${name(to)}'s page. Copying reloads it and discards them. Continue?`)) return;
+  gs.saving = true; gsRender();
+  try {
+    const r = await call("CopySettings", from, to, key ? [key] : []);
+    gs.pages[to] = r.page; gs.edits[to] = {};
+    toast(r.backup ? `Copied to ${name(to)}. Its old settings are backed up.` : "Nothing needed copying.", "ok");
+  } catch {
+    delete gs.pages[to];
+  } finally {
+    gs.saving = false;
+    gs.compare = null; // re-read both files
+    gsRender();
+  }
+}
+
 async function gsSave() {
   const id = gs.id, p = gs.pages[id], changes = gs.edits[id] || {};
   if (!Object.keys(changes).length) return;
@@ -463,7 +522,7 @@ async function gsSave() {
   } catch {
     await gsLoad(id); // the file may have changed; show what's there now
   } finally {
-    gs.saving = false; gsRender();
+    gs.saving = false; gs.compare = null; gsRender();
   }
 }
 
@@ -521,7 +580,12 @@ async function act(name, id, el) {
     case "reset-mcc": snap = await call("ResetMCCFolder"); return render();
     case "redetect": snap = await call("RedetectMCC"); toast("MCC detection refreshed."); return render();
     case "refresh-servers": snap.discovery = await call("RefreshServers").catch(() => snap.discovery); return render();
-    case "gs-tab": gs.id = id; return gsRender();
+    case "gs-tab":
+      gs.id = id;
+      if (id === "sync") gs.compare = null; // always compare the files as they are now
+      return gsRender();
+    case "gs-sync-reload": gs.compare = null; return gsRender();
+    case "gs-copy": return gsCopy(el.dataset.from, el.dataset.to, el.dataset.key);
     case "gs-save": return gsSave();
     case "gs-undo": gs.edits[gs.id] = {}; return gsLoad(gs.id);
     case "gs-reload":

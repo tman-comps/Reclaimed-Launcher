@@ -207,6 +207,11 @@ main { position: relative; overflow: hidden; }
 .gs-grid select.changed { border-color: var(--accent); }
 .gs-grid .ro { color: var(--text); }
 .gs-warn { color: var(--warn) !important; margin-top: 14px !important; }
+.gs-sync { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px 16px; align-items: center; margin-top: 16px; font-size: 13px; }
+.gs-sync .h { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.gs-sync .diff { color: var(--warn); }
+.gs-sync .arrows { display: flex; gap: 6px; }
+.gs-sync .arrows .btn { width: 36px; padding: 0; font-size: 14px; }
 @media (max-width: 720px) { .gs-grid { grid-template-columns: 1fr; } }
 
 .progress { margin: 2px 0 14px; }
