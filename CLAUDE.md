@@ -53,7 +53,7 @@ See README.md for the folder layout, update-conflict rules, and code map.
   (`{"status":2}`, protocol in `docs/server-browser.md`), Servers page lists them, Join
   starts the client with `reclaimer://join/host:port`. Never send the join request
   (`nickname`/`public_key`) from the launcher. Live check: `RECLAIMED_LIVE=1 go test -run
-  Live ./internal/servers/`. A real Join from the launcher hasn't been tried yet.
+  Live ./internal/servers/`. Join from the launcher worked on the owner's PC (2026-10-30).
   Reach Renaissance has no public server list.
 
 ## Commands (Windows, PowerShell)
