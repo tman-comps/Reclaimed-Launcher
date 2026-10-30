@@ -13,6 +13,8 @@ releases-only fan clients that run on Steam's Halo: MCC:
   asset `ReachRenaissance-v<ver>.zip`, run `Reach Renaissance.exe`, must NOT be inside the
   MCC folder. Signed self-updater. Data/logs: `%LOCALAPPDATA%\ReachRenaissance`.
 
+Repository: https://github.com/tman-comps/Reclaimed-Launcher (default branch `main`).
+
 See README.md for the folder layout, update-conflict rules, and code map.
 
 ## Hard rules (from the owner)

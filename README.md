@@ -1,5 +1,7 @@
 # Reclaimed: a launcher for Project Reclaimer and Reach Renaissance
 
+Repository: https://github.com/tman-comps/Reclaimed-Launcher
+
 An unofficial Windows launcher for two fan-made clients that run on top of
 Steam's *Halo: The Master Chief Collection*. It installs each game from its
 GitHub releases, checks the downloads against the release's SHA256SUMS,
