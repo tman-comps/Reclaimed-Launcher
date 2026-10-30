@@ -100,6 +100,14 @@ Renaissance installs signed updates when it starts. The launcher:
 Requires Go 1.26+ (an older Go downloads 1.26 automatically) and the Wails CLI (`go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.1`).
 The frontend is static files in `frontend/dist`, so no npm step is needed.
 
+Wails v2.10.1 can't load packages with Go 1.27 or newer (`internal error: package
+"context" without types ...`). If your Go is newer, build with the 1.26 toolchain;
+Go downloads it automatically:
+
+```powershell
+$env:GOTOOLCHAIN = 'go1.26.10'
+```
+
 ```bash
 wails build -platform windows/amd64 -skipbindings -trimpath -ldflags "-s -w" -webview2 embed
 ```

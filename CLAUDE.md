@@ -46,9 +46,13 @@ See README.md for the folder layout, update-conflict rules, and code map.
 
 ```powershell
 go test ./internal/...
+$env:GOTOOLCHAIN = 'go1.26.10'   # Wails v2.10.1 can't load packages built by Go 1.27+
 wails dev            # live window with hot reload
-wails build -trimpath -ldflags "-s -w" -webview2 embed   # -> build\bin\Reclaimed.exe
+wails build -skipbindings -trimpath -ldflags "-s -w" -webview2 embed   # -> build\bin\Reclaimed.exe
 ```
+
+On Go 1.27+ without `GOTOOLCHAIN`, `wails build` fails with `internal error: package
+"context" without types was imported from ...` (Wails v2.10.1's old `golang.org/x/tools`).
 
 The frontend is static files in `frontend/dist` (no npm build). `frontend/dev/` has a
 mock backend + Playwright preview script for screenshots, not shipped.
