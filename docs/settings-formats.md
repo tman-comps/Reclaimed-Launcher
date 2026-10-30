@@ -38,7 +38,14 @@ Folder: `Documents\My Games\Project Reclaimer`
 | `graphics.vsync` | `true` | bool |
 | `audio.master_volume` | `1` | number, presumably 0 to 1 |
 | `audio.muted`, `audio.mute_unfocused`, `audio.main_menu_music` | `false`/`true` | bool |
+| `content_filter` | `true` | bool (not shown; added by the game later) |
+| `forge_select_distance` | `5.0` | number (not shown; added by the game later) |
 | `version` | `1` | format version |
+
+The last two keys weren't in the file at first: the game added them the next
+time it saved (2026-10-30, right after the launcher's first real save, whose
+`display_mode` change it kept). The game adds keys over time, which is why
+the launcher must keep keys it doesn't know.
 
 The enum lists come from the exe's text, where each sits next to its
 settings struct (`struct GraphicsSettings display_mode frame_limit

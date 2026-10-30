@@ -36,8 +36,8 @@ See README.md for the folder layout, update-conflict rules, and code map.
   MCC detection, a real install of both games, Play, the live server count, and the
   frameless window controls.
 - Phase 2 settings pages are built (`internal/settings`, Settings > Game settings), from the
-  formats in `docs/settings-formats.md`. Reading was checked on the real PC; **a real Save
-  hasn't been tried yet** (only unit tests write). Saving writes the game's own settings
+  formats in `docs/settings-formats.md`. Real saves worked for both games on 2026-10-30
+  (Reclaimer then rewrote its file itself and kept the saved value). Saving writes the game's own settings
   file, the one owner-approved write outside the launcher folder: refused while the game
   runs or if the file changed since loading, unknown keys kept, backup to
   `data\backups\<game>\` first. Reclaimer FOV/frame limit/mouse stay locked until their
