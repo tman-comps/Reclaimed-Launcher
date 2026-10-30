@@ -156,7 +156,9 @@ func Unzip(src, destDir string) error {
 		if f.Mode()&os.ModeSymlink != 0 {
 			return fmt.Errorf("archive contains a symlink: %q", f.Name)
 		}
-		if f.FileInfo().IsDir() {
+		// Zips made on Windows can use `\` separators, which FileInfo().IsDir()
+		// doesn't recognise, so also check the normalised name.
+		if f.FileInfo().IsDir() || strings.HasSuffix(name, "/") {
 			if err := os.MkdirAll(target, 0o755); err != nil {
 				return err
 			}

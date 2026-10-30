@@ -65,6 +65,35 @@ func TestUnzipStripsTopFolder(t *testing.T) {
 	}
 }
 
+// Reach Renaissance's release zip uses `\` separators and lists folder
+// entries (`ReachRenaissance\themes\`) before their files.
+func TestUnzipBackslashFolderEntries(t *testing.T) {
+	dir := t.TempDir()
+	z := filepath.Join(dir, "a.zip")
+	f, _ := os.Create(z)
+	zw := zip.NewWriter(f)
+	for _, e := range []struct{ name, body string }{
+		{`ReachRenaissance\themes\`, ""},
+		{`ReachRenaissance\Reach Renaissance.exe`, "x"},
+		{`ReachRenaissance\themes\classic\boot.js`, "y"},
+	} {
+		w, _ := zw.Create(e.name)
+		w.Write([]byte(e.body))
+	}
+	zw.Close()
+	f.Close()
+	out := filepath.Join(dir, "out")
+	if err := Unzip(z, out); err != nil {
+		t.Fatal(err)
+	}
+	if st, err := os.Stat(filepath.Join(out, "themes")); err != nil || !st.IsDir() {
+		t.Fatalf("themes should be a folder: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "themes", "classic", "boot.js")); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUnzipRejectsTraversal(t *testing.T) {
 	dir := t.TempDir()
 	z := filepath.Join(dir, "a.zip")
