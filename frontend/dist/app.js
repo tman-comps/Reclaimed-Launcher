@@ -321,11 +321,11 @@ function renderSettings() {
     </div>
     <div class="card">
       <h3>Cover art</h3>
-      <p>Optional images, loaded from the <code>art</code> folder next to Rally.exe (never built into the exe). Cards use the portrait image, banners the wide one; missing images fall back to the built-in artwork.</p>
+      <p>Built-in covers are included. To use your own, put a file with the name shown below in the <code>art</code> folder next to Rally.exe and it replaces the built-in one; delete it to go back.</p>
       <dl class="kv">
-        ${snap.games.map((g) => `<dt>${esc(g.name)}</dt><dd>${g.artTall ? "portrait ✓" : `<span class="muted">${esc(g.id)}-tall.png (600×900)</span>`} · ${g.artWide ? "wide ✓" : `<span class="muted">${esc(g.id)}-wide.png (920×430)</span>`}</dd>`).join("")}
+        ${snap.games.map((g) => `<dt>${esc(g.name)}</dt><dd>Portrait: ${esc(g.artTallSrc || "none")} <span class="muted">(${esc(g.id)}-tall.png, 600×900)</span><br>Wide: ${esc(g.artWideSrc || "none")} <span class="muted">(${esc(g.id)}-wide.png, 920×430)</span></dd>`).join("")}
       </dl>
-      <div class="row" style="margin-top:14px"><button class="btn small" data-act="open-art">Open art folder</button><span class="muted">.png, .jpg or .webp · changes show after Check for updates or a restart</span></div>
+      <div class="row" style="margin-top:14px"><button class="btn small" data-act="open-art">Open art folder</button><span class="muted">.png, .jpg or .webp · picked up after Check for updates or a restart</span></div>
     </div>
     <div class="card">
       <h3>Launcher</h3>

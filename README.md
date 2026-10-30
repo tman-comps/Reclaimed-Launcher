@@ -7,7 +7,8 @@ shows versions and updates, and starts the games. It never modifies the
 games' exes or MCC's files.
 
 Not affiliated with Microsoft, Halo Studios, 343 Industries, Bungie, or either
-game's developers. The launcher uses no logos or art from those games.
+game's developers. The built-in cover images are fan-made and include Halo
+trademarks and artwork, which belong to Microsoft.
 
 ## Stack: Go + Wails v2
 
@@ -46,7 +47,7 @@ Rally\
     launcher.log
     webview\               WebView2 cache (kept here, not in %APPDATA%)
   reports\                 settings reports (read-only scans, Phase 2)
-  art\                     optional cover images (see below)
+  art\                     optional cover overrides (see below)
 ```
 
 It only reads these locations: the Steam registry keys and `libraryfolders.vdf`,
@@ -59,9 +60,9 @@ for it come from the game's own updater.
 
 ## Cover art
 
-Cover images are optional and are **never built into the exe**, so a shared
-`Rally.exe` contains no third-party artwork. The launcher loads them from
-`art\` next to the exe, using Steam's capsule sizes:
+Default covers for both games are built into the exe (`internal/art/defaults`).
+To override one, put a file with the same name in `art\` next to the exe; delete
+it to go back to the built-in cover. Sizes follow Steam's capsules:
 
 | File | Size | Used by |
 |---|---|---|
@@ -70,9 +71,8 @@ Cover images are optional and are **never built into the exe**, so a shared
 | `reach-renaissance-tall.<...>` | 600×900 | Cards layout |
 | `reach-renaissance-wide.<...>` | 920×430 | Banners layout |
 
-If one image is missing, the other is used. With neither, the built-in CSS artwork
-is shown. The layout toggle (Cards / Banners) is in the title bar. Only files
-matching these names are served to the UI (`internal/art`).
+The layout toggle (Cards / Banners) is in the title bar. Only files matching
+these names are served to the UI (`internal/art`).
 
 ## How updates avoid fighting the games' own updaters
 
@@ -129,7 +129,7 @@ node frontend/dev/preview.js <screenshot-dir>
 | `internal/proc` | Running-process check, launch, exe version info |
 | `internal/discovery` | Reclaimer public server count |
 | `internal/report` | Read-only settings-folder scan (Phase 2 investigation) |
-| `internal/art` | Serves optional cover images from `art\` |
+| `internal/art` | Built-in cover images and `art\` overrides |
 | `internal/servers` | **Phase 3 placeholder:** server browser and join interfaces, inactive |
 
 ## Roadmap

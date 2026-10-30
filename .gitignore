@@ -3,5 +3,5 @@ build/bin/
 data/
 games/
 reports/
-art/
+/art/
 dist/
