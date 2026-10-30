@@ -38,6 +38,11 @@
     Object.assign(mcc, { found: false, path: "", components: mcc.components.map((c) => ({ ...c, installed: false, detail: "MCC not found" })) });
     games.forEach((g) => { g.requirementOk = false; g.requirementMsg = "Halo: The Master Chief Collection (Steam) wasn't found."; });
   }
+  const art = new URLSearchParams(location.search).get("art");
+  if (art) {
+    Object.assign(games[0], { artTall: `${art}/reclaimer-tall.webp`, artWide: `${art}/reclaimer-wide.webp` });
+    Object.assign(games[1], { artTall: `${art}/reach-renaissance-tall.png`, artWide: `${art}/reach-renaissance-wide.png` });
+  }
   const snap = {
     launcher: { version: "0.1.0", root: "C:\\Games\\Rally" }, mcc, games, checking: false,
     discovery: scenario === "nomcc" ? { ok: false, error: "both endpoints timed out", fetchedAt: now } : { ok: true, servers: 17, masters: 2, endpoint: "http://148.251.153.44:49175/v3/discovery", fetchedAt: now },
@@ -64,7 +69,7 @@
     CheckForUpdates() {}, RefreshServers: async () => snap.discovery, RedetectMCC: async () => structuredClone(snap),
     ChooseMCCFolder: async () => structuredClone(snap), ResetMCCFolder: async () => structuredClone(snap),
     LinkExisting: async () => structuredClone(snap), Unlink: async () => structuredClone(snap),
-    ExportSettingsReport: async () => "C:\\Games\\Rally\\reports\\settings-report.txt",
+    OpenArtFolder: async () => {}, ExportSettingsReport: async () => "C:\\Games\\Rally\\reports\\settings-report.txt",
   };
   window.go = { main: { App: A } };
 })();

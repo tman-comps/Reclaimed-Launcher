@@ -23,7 +23,7 @@ import (
 )
 
 // Version of the launcher itself.
-const Version = "0.1.0"
+const Version = "0.2.0"
 
 const userAgent = "RallyLauncher/" + Version
 
@@ -341,6 +341,15 @@ func (a *App) OpenDataFolder(id string) error {
 		return errors.New("the game hasn't created " + p + " yet; run it once")
 	}
 	return proc.OpenFolder(p)
+}
+
+// OpenArtFolder shows the cover-art folder, creating it if needed (it lives
+// inside the launcher's folder).
+func (a *App) OpenArtFolder() error {
+	if err := os.MkdirAll(a.L.Art, 0o755); err != nil {
+		return err
+	}
+	return proc.OpenFolder(a.L.Art)
 }
 
 // OpenURL opens a link in the default browser.

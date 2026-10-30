@@ -46,6 +46,7 @@ Rally\
     launcher.log
     webview\               WebView2 cache (kept here, not in %APPDATA%)
   reports\                 settings reports (read-only scans, Phase 2)
+  art\                     optional cover images (see below)
 ```
 
 It only reads these locations: the Steam registry keys and `libraryfolders.vdf`,
@@ -55,6 +56,23 @@ It only reads these locations: the Steam registry keys and `libraryfolders.vdf`,
 "Use an existing install..." links a copy you already have elsewhere. The
 launcher then only launches that copy and never writes to its folder. Updates
 for it come from the game's own updater.
+
+## Cover art
+
+Cover images are optional and are **never built into the exe**, so a shared
+`Rally.exe` contains no third-party artwork. The launcher loads them from
+`art\` next to the exe, using Steam's capsule sizes:
+
+| File | Size | Used by |
+|---|---|---|
+| `reclaimer-tall.<png/jpg/webp>` | 600×900 | Cards layout |
+| `reclaimer-wide.<...>` | 920×430 | Banners layout |
+| `reach-renaissance-tall.<...>` | 600×900 | Cards layout |
+| `reach-renaissance-wide.<...>` | 920×430 | Banners layout |
+
+If one image is missing, the other is used. With neither, the built-in CSS artwork
+is shown. The layout toggle (Cards / Banners) is in the title bar. Only files
+matching these names are served to the UI (`internal/art`).
 
 ## How updates avoid fighting the games' own updaters
 
@@ -111,6 +129,7 @@ node frontend/dev/preview.js <screenshot-dir>
 | `internal/proc` | Running-process check, launch, exe version info |
 | `internal/discovery` | Reclaimer public server count |
 | `internal/report` | Read-only settings-folder scan (Phase 2 investigation) |
+| `internal/art` | Serves optional cover images from `art\` |
 | `internal/servers` | **Phase 3 placeholder:** server browser and join interfaces, inactive |
 
 ## Roadmap

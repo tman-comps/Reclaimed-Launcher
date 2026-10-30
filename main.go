@@ -12,6 +12,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"rally/internal/art"
 	"rally/internal/paths"
 )
 
@@ -35,7 +36,7 @@ func main() {
 		MinHeight:        620,
 		Frameless:        true,
 		BackgroundColour: &options.RGBA{R: 8, G: 11, B: 16, A: 255},
-		AssetServer:      &assetserver.Options{Assets: assets},
+		AssetServer:      &assetserver.Options{Assets: assets, Handler: art.Handler(l.Art)},
 		OnStartup:        app.startup,
 		OnBeforeClose:    app.beforeClose,
 		Bind:             []interface{}{app},

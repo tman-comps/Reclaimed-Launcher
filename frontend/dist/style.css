@@ -93,8 +93,7 @@ main { position: relative; overflow: hidden; }
 }
 .tile {
   position: relative; overflow: hidden;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  min-height: 420px;
+  display: flex; flex-direction: column;
   border: 1px solid var(--line-2);
   clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
   background: var(--panel);
@@ -154,7 +153,7 @@ main { position: relative; overflow: hidden; }
   position: absolute; z-index: 2; top: 16px; left: 18px; right: 18px;
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
-.tile-body { position: relative; z-index: 2; padding: 22px 24px 24px; }
+.tile-body { position: relative; z-index: 2; padding: 20px 24px 24px; }
 .kicker { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
 .tile h2 {
   margin: 4px 0 2px; font-size: 34px; line-height: 1.05; font-weight: 700;
@@ -204,7 +203,7 @@ main { position: relative; overflow: hidden; }
 /* dropdown */
 .menu-wrap { position: relative; }
 .menu {
-  position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 10; min-width: 230px;
+  position: fixed; z-index: 40; min-width: 230px;
   background: #0f151e; border: 1px solid var(--line-2); padding: 6px;
   box-shadow: 0 18px 40px rgba(0,0,0,.6);
 }
@@ -265,6 +264,63 @@ main { position: relative; overflow: hidden; }
 .toast.bad { border-left-color: var(--bad); }
 .toast.ok { border-left-color: var(--ok); }
 @keyframes slide { from { transform: translateY(8px); opacity: 0; } }
+
+/* ---------- layouts ----------
+   art = built-in CSS artwork; .cover = user image from the art folder */
+.cover { display: block; width: 100%; height: 100%; object-fit: cover; }
+.media { position: relative; overflow: hidden; flex: none; }
+.media .art, .media .cover { position: absolute; inset: 0; }
+.media .cover { transition: transform .6s ease; }
+.tile:hover .media .cover { transform: scale(1.03); }
+.blur {
+  position: absolute; inset: -40px; z-index: 0; background-size: cover; background-position: center;
+  filter: blur(36px) saturate(1.2) brightness(.42);
+}
+.tile .tile-top { z-index: 3; }
+
+/* Banners: wide header art on top, details below */
+.tiles.banners .media { aspect-ratio: 920 / 430; }
+.tiles.banners .media::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 40%;
+  background: linear-gradient(to top, rgba(6,9,13,.55), transparent);
+}
+.tiles.banners .tile-body { margin-top: auto; }
+.tiles.banners .media .glyph { font-size: 170px; top: -4%; }
+
+/* Cards: MCC-style portrait cards, sized from the available height */
+.tiles.cards {
+  display: flex; justify-content: center; align-items: stretch; gap: 26px;
+  --cap-w: 300px;
+}
+.tiles.cards .tile { width: var(--cap-w); flex: none; background: var(--panel); }
+.tiles.cards .media { aspect-ratio: 600 / 900; }
+.tiles.cards .media .glyph { font-size: 150px; top: 8%; }
+.tiles.cards .tile-body { padding: 14px 16px 16px; margin-top: auto; }
+.tiles.cards .tile h2 { font-size: 22px; }
+.tiles.cards .kicker { font-size: 10px; letter-spacing: .18em; }
+.tiles.cards .meta { margin: 8px 0 12px; gap: 6px; }
+.tiles.cards .chip { font-size: 11.5px; padding: 2px 8px; }
+.tiles.cards .btn.primary { min-width: 0; flex: 1; }
+.tiles.cards .btn { padding: 0 14px; }
+.tiles.cards .note { font-size: 12px; }
+.tiles.cards .btn .lbl { display: none; }
+.tiles.cards.compact .kicker { display: none; }
+.tiles.cards.compact .tile h2 { font-size: 19px; }
+
+.whatsnew {
+  display: block; width: 100%; max-width: 560px; text-align: left; margin: 0 0 14px;
+  background: rgba(8, 12, 18, .45); border: 1px solid var(--line); border-left: 2px solid var(--accent);
+  padding: 9px 12px; color: var(--muted); font-size: 12.5px;
+}
+.whatsnew:hover { background: rgba(8, 12, 18, .7); color: var(--text); }
+.wn-head { display: block; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+.wn-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* layout toggle */
+.seg { display: inline-flex; border: 1px solid var(--line); background: var(--panel-2); }
+.seg button { background: none; border: 0; width: 32px; height: 26px; display: grid; place-items: center; color: var(--muted); }
+.seg button.on { color: var(--accent); background: rgba(92,200,255,.1); }
+.seg svg { width: 14px; height: 14px; fill: currentColor; }
 
 @media (max-width: 1040px) {
   .tile h2 { font-size: 28px; }

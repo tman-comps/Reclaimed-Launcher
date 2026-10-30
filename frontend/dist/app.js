@@ -9,6 +9,8 @@ let api, rt;
 let snap = null;
 const progress = {}; // id -> {phase, done, total}
 let openMenu = null;
+let layout = "cards"; // "cards" (portrait, MCC-style) or "banners" (wide header)
+try { layout = localStorage.getItem("rally.layout") || layout; } catch {}
 
 const ICON = {
   play: '<svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg>',
@@ -153,23 +155,42 @@ function tileHTML(g) {
     primary = `<button class="btn primary" data-act="install" data-id="${g.id}" ${blocked || !g.latest ? "disabled" : ""} title="${g.latest ? `v${esc(g.latest)}${size}` : "Waiting for release info"}">${ICON.down}Install</button>`;
   } else {
     primary = `<button class="btn primary" data-act="play" data-id="${g.id}" ${g.running ? "disabled" : ""}>${ICON.play}${g.running ? "Running" : "Play"}</button>`;
-    if (g.updateAvailable) primary += `<button class="btn" data-act="install" data-id="${g.id}" ${g.running || blocked ? "disabled" : ""} title="${g.running ? "Close the game to update" : ""}">${ICON.down}Update</button>`;
+    if (g.updateAvailable) primary += `<button class="btn" data-act="install" data-id="${g.id}" ${g.running || blocked ? "disabled" : ""} title="${g.running ? "Close the game to update" : `Update to v${esc(g.latest)}`}">${ICON.down}<span class="lbl">Update</span></button>`;
   }
 
   const glyph = g.id === "reclaimer" ? "III" : "R";
-  return `<article class="tile" data-id="${g.id}">
-    <div class="art"><div class="glyph">${glyph}</div></div><div class="shade"></div>
+  // Cards prefer portrait art, banners prefer wide; fall back to the other
+  // image, then to the built-in CSS artwork.
+  const img = layout === "cards" ? (g.artTall || g.artWide) : (g.artWide || g.artTall);
+  const media = img
+    ? `<img class="cover" src="${esc(img)}" alt="" draggable="false" style="object-position:${img === g.artTall || layout === "banners" ? "center" : "left center"}">`
+    : `<div class="art"><div class="glyph">${glyph}</div></div>`;
+  const blur = img ? `<div class="blur" style="background-image:url('${esc(g.artWide || img)}')"></div>` : "";
+  return `<article class="tile${img ? " has-art" : ""}" data-id="${g.id}">
+    ${blur}
+    <div class="media">${media}</div>
     <div class="tile-top">${top.join("")}</div>
     <div class="tile-body">
       <div class="kicker">${esc(g.tagline)}</div>
       <h2>${esc(g.name)}</h2>
       <div class="meta">${chips.join("")}</div>
-      ${note}${prog}
+      ${layout === "banners" ? whatsNew(g) : ""}${note}${prog}
       <div class="actions">${primary}
         <div class="menu-wrap"><button class="btn ghost" data-act="menu" data-id="${g.id}" aria-label="More">${ICON.more}</button></div>
       </div>
     </div>
   </article>`;
+}
+
+// A few plain-text lines from the latest release notes.
+function whatsNew(g) {
+  const lines = String(g.latestNotes || "").split(/\r?\n/)
+    .map((l) => l.replace(/^#+\s*|^\s*[-*]\s+/, "").replace(/\*\*|`/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim())
+    .filter((l) => l && !/^(changes|changelog|what'?s new|release notes)[:.]?$/i.test(l));
+  if (!lines.length) return "";
+  return `<button class="whatsnew" data-act="notes" data-id="${g.id}" title="Read full release notes">
+    <span class="wn-head">What's new in v${esc(g.latest)}</span>
+    <span class="wn-text">${lines.slice(0, 4).map(esc).join(" · ")}</span></button>`;
 }
 
 function serverChip() {
@@ -197,14 +218,51 @@ function menuHTML(g) {
   return `<div class="menu" data-id="${g.id}">${items.join("")}</div>`;
 }
 
+// The menu floats above everything so tile edges can't clip it.
+function placeMenu() {
+  document.querySelectorAll("body > .menu").forEach((m) => m.remove());
+  if (!openMenu) return;
+  const g = snap.games.find((x) => x.id === openMenu);
+  const btn = $(`.tile[data-id="${openMenu}"] [data-act=menu]`);
+  if (!g || !btn) return;
+  document.body.insertAdjacentHTML("beforeend", menuHTML(g));
+  const m = document.body.lastElementChild, r = btn.getBoundingClientRect();
+  const left = Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8));
+  const top = r.top - m.offsetHeight - 6 >= 8 ? r.top - m.offsetHeight - 6 : r.bottom + 6;
+  Object.assign(m.style, { left: `${left}px`, top: `${top}px` });
+}
+
+// Size portrait cards so card + details fill the available height.
+function fitCards() {
+  const el = $("#tiles");
+  if (layout !== "cards" || !el.offsetParent) return;
+  const cs = getComputedStyle(el);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const n = Math.max(1, snap.games.length);
+  const maxW = (el.clientWidth - padX - 26 * (n - 1)) / n;
+  for (let i = 0; i < 2; i++) { // body height depends on width; settle twice
+    const body = Math.max(...[...el.querySelectorAll(".tile-body")].map((b) => b.offsetHeight), 150);
+    const w = Math.max(190, Math.min(maxW, ((el.clientHeight - padY - body - 2) * 2) / 3));
+    el.style.setProperty("--cap-w", `${Math.floor(w)}px`);
+    el.classList.toggle("compact", w < 270);
+  }
+}
+
+function setLayout(l) {
+  layout = l;
+  try { localStorage.setItem("rally.layout", l); } catch {}
+  document.querySelectorAll("#layoutSeg button").forEach((b) => b.classList.toggle("on", b.dataset.layout === l));
+  renderTiles();
+}
+
 function renderTiles() {
   // Keep an open menu across re-renders.
-  $("#tiles").innerHTML = snap.games.map(tileHTML).join("");
-  if (openMenu) {
-    const g = snap.games.find((x) => x.id === openMenu);
-    const wrap = $(`.tile[data-id="${openMenu}"] .menu-wrap`);
-    if (g && wrap) wrap.insertAdjacentHTML("beforeend", menuHTML(g));
-  }
+  const el = $("#tiles");
+  el.className = `tiles ${layout}`;
+  el.innerHTML = snap.games.map(tileHTML).join("");
+  fitCards();
+  placeMenu();
 }
 
 // ---------------------------------------------------------------- pages
@@ -262,11 +320,19 @@ function renderSettings() {
       <div class="row" style="margin-top:12px"><button class="btn small" data-act="report">Export settings report</button></div>
     </div>
     <div class="card">
+      <h3>Cover art</h3>
+      <p>Optional images, loaded from the <code>art</code> folder next to Rally.exe (never built into the exe). Cards use the portrait image, banners the wide one; missing images fall back to the built-in artwork.</p>
+      <dl class="kv">
+        ${snap.games.map((g) => `<dt>${esc(g.name)}</dt><dd>${g.artTall ? "portrait ✓" : `<span class="muted">${esc(g.id)}-tall.png (600×900)</span>`} · ${g.artWide ? "wide ✓" : `<span class="muted">${esc(g.id)}-wide.png (920×430)</span>`}</dd>`).join("")}
+      </dl>
+      <div class="row" style="margin-top:14px"><button class="btn small" data-act="open-art">Open art folder</button><span class="muted">.png, .jpg or .webp · changes show after Check for updates or a restart</span></div>
+    </div>
+    <div class="card">
       <h3>Launcher</h3>
       <dl class="kv">
         <dt>Version</dt><dd>${esc(L.version)}</dd>
         <dt>Folder</dt><dd>${esc(L.root)}</dd>
-        <dt>Writes only to</dt><dd>games\\, data\\, reports\\ inside that folder</dd>
+        <dt>Writes only to</dt><dd>games\\, data\\, reports\\, art\\ inside that folder</dd>
       </dl>
       <p style="margin-top:12px">Not affiliated with Microsoft, Halo Studios, 343 Industries, Bungie, or either game's developers.</p>
     </div>`;
@@ -311,6 +377,7 @@ async function act(name, id, el) {
       if (g && !g.requirementOk && !confirm(`${g.requirementMsg}\n\nTry to start ${g.name} anyway?`)) return;
       await call("Play", id).then(() => toast(`Starting ${g?.name ?? id}…`, "ok")).catch(() => {});
       return;
+    case "open-art": return call("OpenArtFolder").catch(() => {});
     case "open-folder": return call("OpenGameFolder", id).catch(() => {});
     case "open-data": return call("OpenDataFolder", id).catch(() => {});
     case "release-page": return api.OpenURL(g.latestUrl);
@@ -358,6 +425,12 @@ function wire() {
       document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${t.dataset.view}`));
     };
   }
+  document.querySelectorAll("#layoutSeg button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.layout === layout);
+    b.onclick = () => setLayout(b.dataset.layout);
+  });
+  new ResizeObserver(() => { fitCards(); placeMenu(); }).observe($("#tiles"));
+  document.querySelector('.tab[data-view="play"]').addEventListener("click", () => requestAnimationFrame(fitCards));
   $("#mccPill").onclick = () => document.querySelector('.tab[data-view="settings"]').click();
   $("#checkNow").onclick = () => api.CheckForUpdates();
   $("#wMin").onclick = () => rt.WindowMinimise();

@@ -17,6 +17,7 @@ type Layout struct {
 	Previous string // <root>/games/.previous/<game id> (last version, for rollback)
 	Data     string // <root>/data (state.json, logs, webview cache)
 	Reports  string // <root>/reports
+	Art      string // <root>/art (optional user-supplied cover images)
 }
 
 // Resolve builds the layout from the exe location. RALLY_HOME overrides it
@@ -46,6 +47,7 @@ func New(root string) Layout {
 		Previous: filepath.Join(games, ".previous"),
 		Data:     filepath.Join(root, "data"),
 		Reports:  filepath.Join(root, "reports"),
+		Art:      filepath.Join(root, "art"),
 	}
 }
 
