@@ -1,0 +1,19 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Rally",
+  "outputfilename": "Rally",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dir": "frontend",
+  "wailsjsdir": "",
+  "author": {
+    "name": "Rally contributors"
+  },
+  "info": {
+    "companyName": "Rally",
+    "productName": "Rally Launcher",
+    "productVersion": "0.1.0",
+    "copyright": "Unofficial fan launcher. Not affiliated with Microsoft or the game projects.",
+    "comments": "Launcher for Project Reclaimer and Reach Renaissance"
+  }
+}

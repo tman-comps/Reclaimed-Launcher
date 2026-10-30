@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rally</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="titlebar" style="--wails-draggable:drag">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 12 4l9 14h-4.2L12 10.4 7.2 18z"/><path d="M9.6 18 12 14.2 14.4 18z" opacity=".55"/></svg>
+      <span>RALLY</span>
+    </div>
+    <nav class="tabs" role="tablist" style="--wails-draggable:no-drag">
+      <button class="tab active" data-view="play" role="tab">Play</button>
+      <button class="tab" data-view="servers" role="tab">Servers</button>
+      <button class="tab" data-view="settings" role="tab">Settings</button>
+    </nav>
+    <div class="spacer"></div>
+    <button id="mccPill" class="pill" style="--wails-draggable:no-drag" title="MCC detection"></button>
+    <div class="winctl" style="--wails-draggable:no-drag">
+      <button id="wMin" aria-label="Minimise"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+      <button id="wMax" aria-label="Maximise"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></button>
+      <button id="wClose" class="close" aria-label="Close"><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></button>
+    </div>
+  </header>
+
+  <div id="banners"></div>
+
+  <main>
+    <section id="view-play" class="view active">
+      <div id="tiles" class="tiles"></div>
+    </section>
+
+    <section id="view-servers" class="view">
+      <div class="page">
+        <h1>Servers</h1>
+        <div id="serversBody"></div>
+      </div>
+    </section>
+
+    <section id="view-settings" class="view">
+      <div class="page">
+        <h1>Settings</h1>
+        <div id="settingsBody"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span id="updStatus"></span>
+    <button id="checkNow" class="link">Check for updates</button>
+    <span class="spacer"></span>
+    <span id="rootPath" class="muted"></span>
+  </footer>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-head"><h2 id="modalTitle"></h2><button class="icon-btn" id="modalClose" aria-label="Close">✕</button></div>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
