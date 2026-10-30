@@ -44,7 +44,7 @@ button:disabled { cursor: not-allowed; }
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: .32em; font-size: 13px; }
-.mark { width: 20px; height: 20px; fill: var(--accent); }
+.mark { width: 22px; height: 22px; object-fit: contain; }
 .tabs { display: flex; height: 100%; }
 .tab {
   background: none; border: 0; padding: 0 16px; height: 100%;

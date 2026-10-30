@@ -23,7 +23,7 @@ import (
 )
 
 // Version of the launcher itself.
-const Version = "0.2.1"
+const Version = "0.2.2"
 
 const userAgent = "RallyLauncher/" + Version
 
