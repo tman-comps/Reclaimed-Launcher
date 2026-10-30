@@ -109,16 +109,32 @@ keep them consistent the same way.
   above. Leave a key out (rather than writing its default) when it isn't
   already in the file. Refuse while the game runs or `settings.txt.live`
   looks active.
-- **Sync between games** is possible for:
-  - FOV and vehicle/third-person FOV, snapped to Reach's list.
-  - Frame limit (Reclaimer number vs Reach list; `0` = unlimited in Reach).
-  - V-sync.
-  - Display mode: Reach has no `exclusive_fullscreen`.
-  - Resolution: different scales (`r1080p` vs `1920x1080`), mapping needed.
-  - Not mouse sensitivity: Reclaimer's `1.5` and Reach's `100` (%) use
-    different units with no known conversion.
-- Still unknown: Reclaimer's number ranges (FOV, frame limit, sensitivity,
-  smoothing). Its in-game settings menu shows them.
+## Sync between the games
+
+Settings that mean the same thing in both games, and how values map:
+
+| Setting | Project Reclaimer | Reach Renaissance | Mapping |
+|---|---|---|---|
+| Field of view | `field_of_view` (85.0) | `fov` ("90") | Same list, 70 to 120 |
+| Vehicle / third-person FOV | `vehicle_field_of_view` (70.0) | `fov.vehicle` ("90") | Same list. Halo 3's vehicle camera vs Reach's third-person camera: close, not identical |
+| Frame limit | `graphics.frame_limit` (120) | `fps` ("120") | 30 to 240 both ways. Reach's `0` (unlimited) has no Reclaimer value, so it isn't copied |
+| V-sync | `graphics.vsync` (true) | `vsync` ("on") | true = on |
+| Window mode | `graphics.display_mode` (borderless) | `display` (borderless) | windowed and borderless both ways. Reclaimer's `exclusive_fullscreen` has no Reach value, so it isn't copied |
+| Volume | `audio.master_volume` (1.0) | `volume.game` ("100") | 0 to 1 vs percent. Reach's game volume covers all game sound and music, like a master volume |
+
+Values in brackets are this PC's on 2026-10-30: only the two FOVs differ.
+
+Not synced:
+- **Resolution.** Reclaimer's `render_resolution` (720p to 2160p) is the
+  resolution the game draws at; Reach's `resolution` is the window size (or
+  automatic). They aren't the same setting.
+- **Mouse sensitivity.** Different units (`1.5` vs `100` %), no known
+  conversion; also not shown, by the owner's choice.
+- Graphics quality, gamma, subtitles and the other volumes exist in only
+  one of the games.
+
+A sync is just two ordinary saves, with every save rule (refused while that
+game runs, backup first, unknown keys kept).
 
 Both settings pages are built in `internal/settings` as described above.
 
