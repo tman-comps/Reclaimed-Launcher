@@ -139,10 +139,13 @@ func CheckComponents(mccPath string) []Component {
 	return out
 }
 
+// steamRoot is SteamRoot, swappable so tests don't read the real registry.
+var steamRoot = SteamRoot
+
 // Detect runs a full detection. manualPath, when set, overrides Steam lookup.
 func Detect(manualPath string) MCCInfo {
 	info := MCCInfo{}
-	if root := SteamRoot(); root != "" {
+	if root := steamRoot(); root != "" {
 		info.SteamFound = true
 		info.SteamPath = root
 		info.Libraries = Libraries(root)

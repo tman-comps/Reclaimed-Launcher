@@ -17,6 +17,14 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
+// fakeSteamRoot points Detect at root instead of the registry or real Steam.
+func fakeSteamRoot(t *testing.T, root string) {
+	t.Helper()
+	old := steamRoot
+	steamRoot = func() string { return root }
+	t.Cleanup(func() { steamRoot = old })
+}
+
 func TestDetectAcrossLibraries(t *testing.T) {
 	tmp := t.TempDir()
 	steamRoot := filepath.Join(tmp, "Steam")
@@ -31,7 +39,7 @@ func TestDetectAcrossLibraries(t *testing.T) {
 	write(t, filepath.Join(mcc, "halo3", "maps", "guardian.map"), "x")
 	write(t, filepath.Join(mcc, "haloreach", "haloreach.dll"), "x") // no maps
 
-	t.Setenv("RECLAIMED_STEAM_ROOT", steamRoot)
+	fakeSteamRoot(t, steamRoot)
 	info := Detect("")
 	if !info.Found || info.Path != mcc {
 		t.Fatalf("MCC not found: %+v", info)
@@ -48,7 +56,7 @@ func TestDetectAcrossLibraries(t *testing.T) {
 }
 
 func TestDetectNoSteam(t *testing.T) {
-	t.Setenv("RECLAIMED_STEAM_ROOT", "")
+	fakeSteamRoot(t, "")
 	info := Detect("")
 	if info.Found || info.SteamFound || len(info.Components) != 2 {
 		t.Fatalf("unexpected: %+v", info)
