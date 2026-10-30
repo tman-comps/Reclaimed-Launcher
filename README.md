@@ -56,6 +56,11 @@ It only reads these locations: the Steam registry keys and `libraryfolders.vdf`,
 `appmanifest_976730.acf`, the MCC folder,
 `Documents\My Games\Project Reclaimer`, and `%LOCALAPPDATA%\ReachRenaissance`.
 
+On the network it talks to GitHub (releases), Project Reclaimer's discovery
+masters (the server list), and, when the Servers page is opened or
+refreshed, each listed Reclaimer server, which it asks only for its public
+status.
+
 The one exception to "only writes inside its own folder" is when you press Save
 under Settings > Game settings: the launcher then writes that game's own
 settings file (`settings.json` or `settings.txt` in the folders above). It
@@ -148,7 +153,7 @@ node frontend/dev/preview.js <screenshot-dir>
 | `internal/settings` | Each game's settings file: read, validate, back up, write (Phase 2) |
 | `internal/report` | Read-only settings-folder scan |
 | `internal/art` | Built-in cover images and `art\` overrides |
-| `internal/servers` | **Phase 3 placeholder:** server browser and join interfaces, inactive |
+| `internal/servers` | Server browser: asks each Reclaimer server for its status (QUIC), join links |
 
 ## Roadmap
 
@@ -157,6 +162,8 @@ node frontend/dev/preview.js <screenshot-dir>
   compares the six settings both games share (field of view, vehicle field of
   view, frame limit, v-sync, window mode, volume) and copies them either way,
   only when you click.
-- **Phase 3: server browser and join.** Blocked until each game documents a
-  server-info query and a join method. Add `servers.Source`/`servers.Joiner`
-  implementations and the Servers page will use them.
+- **Phase 3: server browser and join.** Project Reclaimer's servers are
+  listed on the Servers page with name, map, mode, players and ping, and Join
+  hands a server to the game through its own `reclaimer://join/` link (how it
+  works: `docs/server-browser.md`). Reach Renaissance has no public server
+  list yet.

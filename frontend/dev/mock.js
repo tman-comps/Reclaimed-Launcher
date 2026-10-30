@@ -46,9 +46,25 @@
   const snap = {
     launcher: { version: "0.3.0", root: "C:\\Games\\Reclaimed" }, mcc, games, checking: false,
     discovery: scenario === "nomcc" ? { ok: false, error: "both endpoints timed out", fetchedAt: now } : { ok: true, servers: 17, masters: 2, endpoint: "http://148.251.153.44:49175/v3/discovery", fetchedAt: now },
-    servers: { available: false, reason: "not available yet: waiting for the game's developers to document a server query and join method",
-      needs: ["Project Reclaimer: a documented per-server info query (the discovery list has addresses only) and a join argument or URI", "Reach Renaissance: a public server list API and a join argument or URI"] },
   };
+  // Server browser rows, shaped like real status replies (docs/server-browser.md).
+  const servers = [
+    ["DaBois | Hugegrass 120 Player (Updated)", "Juices Server", "Hugegrass · Custom", "Capture the Flag", 99, 120, 61],
+    ["!Vote ANY map anytime | TS BR | FFA | Infection", "", "Guardian", "Slayer", 2, 124, 29],
+    ["[IBIGS.us] WL Custom Maps", "IBIGS.us", "Sandbox", "VIP", 16, 16, 44],
+    ["Ellis Box | Big Team Battle 24/7", "", "Valhalla", "Slayer", 0, 126, 62],
+    ["EU | Jlab Systems | Team Slayer 4v4", "Jlab Systems", "Guardian", "Slayer", 0, 8, 174],
+    ["Private scrims", "", "The Pit", "Slayer", 3, 8, 88, true],
+  ].map(([name, hostName, map, mode, players, capacity, pingMs, pw], i) => ({
+    address: `10.0.0.${i + 1}:4917${i}`, name, hostName, map, mode, variant: mode, players, capacity, pingMs,
+    passwordRequired: !!pw, version: "0.9.23", mods: i === 0 ? 1 : 0, playerNames: Array.from({ length: Math.min(players, 6) }, (_, j) => `Player${j + 1}`),
+  }));
+  let serverList = null;
+  const page = (game) => game === "reclaimer"
+    ? { game, path: "C:\\Users\\you\\Documents\\My Games\\Project Reclaimer\\settings.json", stamp: "x", note: "Settings not shown here are left as they are.",
+        fields: [{ key: "field_of_view", label: "Field of view", group: "Video", value: "85", options: ["70", "78", "85", "90"].map((v) => ({ value: v, label: v })) }] }
+    : { game, path: "C:\\Users\\you\\AppData\\Local\\ReachRenaissance\\settings.txt", stamp: "y",
+        fields: [{ key: "fov", label: "Field of view", group: "Video", value: "90", options: ["70", "78", "85", "90"].map((v) => ({ value: v, label: v })) }] };
   const emit = (n, d) => (handlers[n] || []).forEach((f) => f(d));
   window.runtime = {
     EventsOn: (n, f) => { (handlers[n] ||= []).push(f); },
@@ -70,6 +86,25 @@
     ChooseMCCFolder: async () => structuredClone(snap), ResetMCCFolder: async () => structuredClone(snap),
     LinkExisting: async () => structuredClone(snap), Unlink: async () => structuredClone(snap),
     OpenArtFolder: async () => {}, ExportSettingsReport: async () => "C:\\Games\\Reclaimed\\reports\\settings-report.txt",
+    GameSettings: async (id) => page(id),
+    SaveGameSettings: async (id) => ({ page: page(id), backup: "C:\\Games\\Reclaimed\\data\\backups\\x.bak" }),
+    CompareSettings: async () => ({ rows: [{ key: "fov", label: "Field of view", same: false,
+      sides: { reclaimer: { value: "85", label: "85", canCopy: true }, "reach-renaissance": { value: "90", label: "90", canCopy: true } } }] }),
+    CopySettings: async (from, to) => ({ page: page(to), backup: "x" }), OpenSettingsBackups: async () => {},
+    ServerList: async () => serverList,
+    RefreshServerList() {
+      // Answers arrive over about a second, like the real browse.
+      const list = { servers: [], asked: servers.length + 2, answered: 0, done: false };
+      servers.forEach((s, i) => setTimeout(() => {
+        list.servers = [...list.servers, s].sort((a, b) => b.players - a.players || a.pingMs - b.pingMs);
+        list.answered++;
+        list.done = list.answered === servers.length;
+        list.updatedAt = new Date().toISOString();
+        serverList = structuredClone(list);
+        emit("servers", structuredClone(list));
+      }, 150 * (i + 1)));
+    },
+    JoinServer: async (addr) => { if (!/^[A-Za-z0-9.-]{1,253}:\d{1,5}$/.test(addr)) throw "enter the server's address as host:port"; },
   };
   window.go = { main: { App: A } };
 })();

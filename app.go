@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,8 +42,17 @@ type Snapshot struct {
 	MCC       steam.MCCInfo    `json:"mcc"`
 	Games     []games.Status   `json:"games"`
 	Discovery discovery.Result `json:"discovery"`
-	Servers   servers.Status   `json:"servers"`
 	Checking  bool             `json:"checking"`
+}
+
+// ServerList is the server browser's state.
+type ServerList struct {
+	Servers   []servers.Server `json:"servers"`
+	Asked     int              `json:"asked"`    // addresses the masters listed
+	Answered  int              `json:"answered"` // servers that replied so far
+	Done      bool             `json:"done"`
+	Error     string           `json:"error,omitempty"`
+	UpdatedAt time.Time        `json:"updatedAt"`
 }
 
 // App is bound to the frontend; exported methods are callable from JS.
@@ -59,6 +69,8 @@ type App struct {
 	problem  string
 	checking bool
 	cancels  map[string]context.CancelFunc
+	sl       ServerList
+	browsing bool
 }
 
 // NewApp prepares the app; startup errors are shown in the UI, not fatal.
@@ -137,7 +149,6 @@ func (a *App) Snapshot() Snapshot {
 		Launcher:  LauncherInfo{Version: Version, Root: a.L.Root, Problem: a.problem},
 		MCC:       a.mcc,
 		Discovery: a.dr,
-		Servers:   servers.Available(),
 		Checking:  a.checking,
 	}
 	a.mu.Unlock()
@@ -310,6 +321,105 @@ func (a *App) Play(id string) error {
 	if err := a.mgr.Launch(id); err != nil {
 		return err
 	}
+	go func() { time.Sleep(1500 * time.Millisecond); a.emit() }()
+	return nil
+}
+
+// Server browser: how many servers are asked at once, and how long each may
+// take to answer. The game's own browser asks in batches too.
+const (
+	browseParallel = 48
+	browseTimeout  = 3 * time.Second
+)
+
+// ServerList returns the server browser's last result.
+func (a *App) ServerList() ServerList {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.sl
+}
+
+// RefreshServerList asks every server the discovery masters list for its
+// status, in the background. "servers" events carry the list as it fills.
+func (a *App) RefreshServerList() {
+	a.mu.Lock()
+	if a.browsing {
+		a.mu.Unlock()
+		return
+	}
+	a.browsing = true
+	a.mu.Unlock()
+	go a.browse()
+}
+
+func (a *App) publishServers(sl ServerList) {
+	servers.Sort(sl.Servers)
+	sl.UpdatedAt = time.Now()
+	a.mu.Lock()
+	a.sl = sl
+	a.mu.Unlock()
+	runtime.EventsEmit(a.ctx, "servers", sl)
+}
+
+func (a *App) browse() {
+	defer func() {
+		a.mu.Lock()
+		a.browsing = false
+		a.mu.Unlock()
+	}()
+	ctx, cancel := context.WithTimeout(a.ctx, 90*time.Second)
+	defer cancel()
+	r := discovery.Fetch(ctx, a.disc, discovery.DefaultEndpoints)
+	a.mu.Lock()
+	a.dr = r
+	a.mu.Unlock()
+	runtime.EventsEmit(a.ctx, "discovery", r)
+	addrs := r.Addresses()
+	sl := ServerList{Asked: len(addrs)}
+	if !r.OK || len(addrs) == 0 {
+		sl.Done, sl.Error = true, r.Error
+		if sl.Error == "" {
+			sl.Error = servers.ErrNoAddresses.Error()
+		}
+		a.publishServers(sl)
+		return
+	}
+	q, err := servers.NewQuerier()
+	if err != nil {
+		sl.Done, sl.Error = true, err.Error()
+		a.publishServers(sl)
+		return
+	}
+	defer q.Close()
+	a.publishServers(sl)
+	last := time.Now()
+	q.Browse(ctx, addrs, browseParallel, browseTimeout, func(s servers.Server, err error) {
+		if err != nil {
+			return
+		}
+		sl.Answered++
+		sl.Servers = append(sl.Servers, s)
+		if time.Since(last) > 400*time.Millisecond {
+			last = time.Now()
+			a.publishServers(ServerList{Servers: append([]servers.Server(nil), sl.Servers...), Asked: sl.Asked, Answered: sl.Answered})
+		}
+	})
+	sl.Done = true
+	runtime.LogInfof(a.ctx, "servers: %d of %d answered", sl.Answered, sl.Asked)
+	a.publishServers(sl)
+}
+
+// JoinServer starts Project Reclaimer with a join link to addr (host:port).
+// The game does the joining; a running game takes the link over itself.
+func (a *App) JoinServer(addr string) error {
+	addr = strings.TrimSpace(addr)
+	if !servers.ValidAddress(addr) {
+		return errors.New("enter the server's address as host:port, for example 1.2.3.4:49177")
+	}
+	if err := a.mgr.Join("reclaimer", servers.JoinLink(addr)); err != nil {
+		return err
+	}
+	runtime.LogInfof(a.ctx, "join: asked Project Reclaimer to join %s", addr)
 	go func() { time.Sleep(1500 * time.Millisecond); a.emit() }()
 	return nil
 }

@@ -21,6 +21,23 @@ func TestFallbackToBackup(t *testing.T) {
 	}
 }
 
+// The record shape seen on the live masters (2026-10-30).
+func TestAddresses(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"records":[
+			{"record":{"key":"k1","address":"play.halo.latorre.cloud:49178","issued":1,"expires":181},"signature":"s"},
+			{"record":{"key":"k2","origin":"http://1.2.3.4:49175","address":"1.2.3.4:49177","issued":1,"expires":181},"signature":"s"},
+			{"record":{"key":"k3","address":"1.2.3.4:49177"},"signature":"s"},
+			{"record":{"key":"k4"}},
+			"junk"],"masters":[]}`)
+	}))
+	defer srv.Close()
+	got := Fetch(context.Background(), http.DefaultClient, []string{srv.URL}).Addresses()
+	if fmt.Sprint(got) != "[play.halo.latorre.cloud:49178 1.2.3.4:49177]" {
+		t.Fatalf("addresses = %v", got)
+	}
+}
+
 func TestBothDown(t *testing.T) {
 	bad := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, `{"nope":1}`) }))
 	defer bad.Close()

@@ -1,6 +1,6 @@
-// Package discovery reads Project Reclaimer's public server list. The
-// endpoint returns signed server addresses only, so the launcher can show a
-// count but not names, maps or player numbers.
+// Package discovery reads Project Reclaimer's public server list: signed
+// records of live server addresses (each lives 180 seconds). Names, maps and
+// players come from asking each server (package servers).
 package discovery
 
 import (
@@ -28,9 +28,28 @@ type Result struct {
 	FetchedAt time.Time `json:"fetchedAt"`
 	Error     string    `json:"error,omitempty"`
 
-	// Records are kept raw for Phase 3 (server browser); their format is
-	// not documented yet, so nothing here interprets them.
+	// Records are kept raw; Addresses reads the server addresses from them.
 	Records []json.RawMessage `json:"-"`
+}
+
+// Addresses returns each record's server address ("host:port"), without
+// duplicates, in list order. Records it can't read are skipped.
+func (r Result) Addresses() []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, raw := range r.Records {
+		var rec struct {
+			Record struct {
+				Address string `json:"address"`
+			} `json:"record"`
+		}
+		if json.Unmarshal(raw, &rec) != nil || rec.Record.Address == "" || seen[rec.Record.Address] {
+			continue
+		}
+		seen[rec.Record.Address] = true
+		out = append(out, rec.Record.Address)
+	}
+	return out
 }
 
 type payload struct {

@@ -537,6 +537,26 @@ func (m *Manager) Launch(id string) error {
 	return proc.Launch(exe)
 }
 
+// Join starts the game with a join link. Unlike Launch it's fine while the
+// game runs: the running game takes the link over itself.
+func (m *Manager) Join(id, link string) error {
+	d, err := m.def(id)
+	if err != nil {
+		return err
+	}
+	m.mu.Lock()
+	busy := m.busy[id]
+	m.mu.Unlock()
+	if busy != "" {
+		return errors.New("wait for the install to finish")
+	}
+	exe := m.findExe(d, m.Dir(id), m.Store.Get(id))
+	if exe == "" {
+		return errors.New(d.Name + " isn't installed")
+	}
+	return proc.Launch(exe, link)
+}
+
 // Link points the launcher at an install the user already has. Nothing is
 // written to that folder.
 func (m *Manager) Link(id, dir string) error {

@@ -271,33 +271,108 @@ function renderTiles() {
 }
 
 // ---------------------------------------------------------------- pages
+// Project Reclaimer's server browser. Built once, so typing, ticks and scroll
+// survive redraws; only the rows and the status line are redrawn.
+const sb = { el: null, list: null, q: "", hideEmpty: false, hideFull: false, hidePw: false, open: null };
+
 function renderServers() {
-  const d = snap.discovery || {};
-  const s = snap.servers || {};
-  const ok = d.ok;
-  $("#serversBody").innerHTML = `
-    <div class="card">
-      <div class="row"><h3 style="flex:1">Project Reclaimer</h3><button class="btn small" data-act="refresh-servers">Refresh</button></div>
-      <div class="row" style="margin-top:10px;align-items:flex-end;gap:14px">
-        <div class="big-num">${ok ? d.servers : "—"}</div>
-        <div class="muted" style="padding-bottom:6px">${ok ? "public servers listed" : esc(d.error || "Not checked yet")}</div>
+  if (!sb.el) {
+    sb.el = document.createElement("div");
+    sb.el.innerHTML = `
+      <div class="card">
+        <div class="row"><h3 style="flex:1">Project Reclaimer</h3><span class="muted" id="sbStatus"></span>
+          <button class="btn small" data-act="sb-refresh" id="sbRefresh">Refresh</button></div>
+        <div class="row sb-tools">
+          <input id="sbSearch" type="search" placeholder="Search server, map or mode" autocomplete="off" spellcheck="false">
+          <label><input type="checkbox" id="sbEmpty"> Hide empty</label>
+          <label><input type="checkbox" id="sbFull"> Hide full</label>
+          <label><input type="checkbox" id="sbPw"> Hide password-protected</label>
+        </div>
+        <div class="sb-list">
+          <div class="sb-row sb-head"><div>Server</div><div>Map</div><div>Mode</div><div>Players</div><div>Ping</div><div></div></div>
+          <div id="sbRows"></div>
+        </div>
+        <div class="row sb-direct">
+          <input id="sbAddr" placeholder="Direct connect: host:port" autocomplete="off" spellcheck="false">
+          <button class="btn small" data-act="sb-direct">Join</button>
+          <span class="muted">Joining starts Project Reclaimer (or hands the server to it if it's open).</span>
+        </div>
       </div>
+      <div class="card">
+        <h3>Reach Renaissance</h3>
+        <p>Servers are listed in-game under Matchmaking. There's no public list the launcher can read yet.</p>
+      </div>`;
+    $("#sbSearch", sb.el).oninput = (e) => { sb.q = e.target.value.trim().toLowerCase(); sbRows(); };
+    for (const [id, k] of [["sbEmpty", "hideEmpty"], ["sbFull", "hideFull"], ["sbPw", "hidePw"]]) {
+      $(`#${id}`, sb.el).onchange = (e) => { sb[k] = e.target.checked; sbRows(); };
+    }
+    $("#sbAddr", sb.el).onkeydown = (e) => { if (e.key === "Enter") sbJoin(e.target.value.trim()); };
+    $("#sbRows", sb.el).addEventListener("click", (e) => {
+      const row = e.target.closest(".sb-row[data-addr]");
+      if (!row || e.target.closest("button")) return;
+      sb.open = sb.open === row.dataset.addr ? null : row.dataset.addr;
+      sbRows();
+    });
+    $("#serversBody").replaceChildren(sb.el);
+    sbRows();
+  }
+  sbStatus();
+}
+
+function sbStatus() {
+  const L = sb.list, busy = L && !L.done;
+  $("#sbStatus").textContent = !L ? "" : L.error ? L.error
+    : busy ? `Asking servers… ${L.answered} answered of ${L.asked}`
+    : `${L.answered} of ${L.asked} servers answered · ${ago(L.updatedAt) || "just now"}`;
+  $("#sbRefresh").disabled = !!busy;
+}
+
+function sbVisible() {
+  const L = sb.list?.servers || [];
+  return L.filter((s) => (!sb.hideEmpty || s.players > 0) && (!sb.hideFull || s.players < s.capacity) && (!sb.hidePw || !s.passwordRequired) &&
+    (!sb.q || `${s.name} ${s.hostName} ${s.map} ${s.mode} ${s.variant} ${s.address}`.toLowerCase().includes(sb.q)));
+}
+
+function sbRows() {
+  const box = $("#sbRows", sb.el);
+  if (!sb.list) { box.innerHTML = `<p class="muted sb-empty">Open this page to ask the servers.</p>`; return; }
+  const rows = sbVisible();
+  if (!rows.length) {
+    box.innerHTML = `<p class="muted sb-empty">${sb.list.done ? (sb.list.servers?.length ? "No servers match." : "No servers answered.") : "Asking servers…"}</p>`;
+    return;
+  }
+  const players = rows.reduce((n, s) => n + s.players, 0);
+  box.innerHTML = rows.map((s) => {
+    const full = s.players >= s.capacity, open = sb.open === s.address;
+    return `<div class="sb-row${open ? " open" : ""}" data-addr="${esc(s.address)}" title="Click for details">
+      <div class="n"><b>${s.passwordRequired ? `<span class="tag" title="Needs a password to join">Password</span>` : ""}${esc(s.name)}</b>${s.hostName ? `<span class="muted">${esc(s.hostName)}</span>` : ""}</div>
+      <div>${esc(s.map)}</div>
+      <div>${esc(s.mode)}</div>
+      <div class="${full ? "full" : s.players ? "live" : "muted"}">${s.players} / ${s.capacity}</div>
+      <div class="muted">${s.pingMs} ms</div>
+      <div><button class="btn small primary" data-act="sb-join" data-addr="${esc(s.address)}"${full ? ' title="Full: the game may queue you or refuse"' : ""}>Join</button></div>
+    </div>${open ? `<div class="sb-detail">
       <dl class="kv">
-        <dt>Master servers</dt><dd>${ok ? d.masters : "—"}</dd>
-        <dt>Source</dt><dd>${esc(d.endpoint || "—")}</dd>
-        <dt>Updated</dt><dd>${esc(ago(d.fetchedAt) || "—")} · refreshes every minute</dd>
-      </dl>
-      <p style="margin-top:12px">The discovery service lists signed server addresses only, so names, maps and player counts aren't shown. Pick a server in-game.</p>
-    </div>
-    <div class="card">
-      <h3>Reach Renaissance</h3>
-      <p>Servers are listed in-game under Matchmaking. There's no public list the launcher can read yet.</p>
-    </div>
-    <div class="card locked">
-      <div class="row"><h3 style="flex:1">Combined server browser</h3><span class="tag">Later</span></div>
-      <p>${esc((s.reason || "").replace(/^./, (c) => c.toUpperCase()))}.</p>
-      <ul>${(s.needs || []).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>
-    </div>`;
+        <dt>Address</dt><dd>${esc(s.address)}</dd>
+        <dt>Game type</dt><dd>${esc(s.variant || s.mode)}</dd>
+        <dt>Version</dt><dd>${esc(s.version || "—")}${s.mods ? ` · ${s.mods} mod${s.mods > 1 ? "s" : ""}` : ""}</dd>
+        <dt>Players</dt><dd>${s.playerNames?.length ? s.playerNames.map(esc).join(", ") : "None right now"}</dd>
+      </dl></div>` : ""}`;
+  }).join("") + `<p class="muted sb-empty">${rows.length} server${rows.length > 1 ? "s" : ""} · ${players} player${players === 1 ? "" : "s"}</p>`;
+}
+
+// Ask again when the page is opened and the list is more than a minute old.
+function sbMaybeRefresh() {
+  const L = sb.list;
+  if (!L || (L.done && Date.now() - new Date(L.updatedAt) > 60000)) api.RefreshServerList();
+}
+
+async function sbJoin(addr) {
+  const g = snap.games.find((x) => x.id === "reclaimer");
+  if (!g?.installed) return toast("Install Project Reclaimer first (Play tab).", "bad");
+  if (!g.requirementOk && !confirm(`${g.requirementMsg}\n\nJoin anyway?`)) return;
+  const s = sb.list?.servers?.find((x) => x.address === addr);
+  await call("JoinServer", addr).then(() => toast(`Joining ${s?.name ?? addr}…`, "ok")).catch(() => {});
 }
 
 function renderSettings() {
@@ -579,7 +654,9 @@ async function act(name, id, el) {
     case "locate-mcc": snap = await call("ChooseMCCFolder").catch(() => snap); return render();
     case "reset-mcc": snap = await call("ResetMCCFolder"); return render();
     case "redetect": snap = await call("RedetectMCC"); toast("MCC detection refreshed."); return render();
-    case "refresh-servers": snap.discovery = await call("RefreshServers").catch(() => snap.discovery); return render();
+    case "sb-refresh": return api.RefreshServerList();
+    case "sb-join": return sbJoin(el.dataset.addr);
+    case "sb-direct": return sbJoin($("#sbAddr").value.trim());
     case "gs-tab":
       gs.id = id;
       if (id === "sync") gs.compare = null; // always compare the files as they are now
@@ -631,6 +708,7 @@ function wire() {
   });
   new ResizeObserver(() => { fitCards(); placeMenu(); }).observe($("#tiles"));
   document.querySelector('.tab[data-view="play"]').addEventListener("click", () => requestAnimationFrame(fitCards));
+  document.querySelector('.tab[data-view="servers"]').addEventListener("click", sbMaybeRefresh);
   $("#mccPill").onclick = () => document.querySelector('.tab[data-view="settings"]').click();
   $("#checkNow").onclick = () => api.CheckForUpdates();
   $("#wMin").onclick = () => rt.WindowMinimise();
@@ -638,7 +716,8 @@ function wire() {
   $("#wClose").onclick = () => rt.Quit();
 
   rt.EventsOn("snapshot", (s) => { snap = s; render(); });
-  rt.EventsOn("discovery", (d) => { if (snap) { snap.discovery = d; renderTiles(); renderServers(); } });
+  rt.EventsOn("discovery", (d) => { if (snap) { snap.discovery = d; renderTiles(); } });
+  rt.EventsOn("servers", (l) => { sb.list = l; if (sb.el) { sbRows(); sbStatus(); } });
   rt.EventsOn("progress", (p) => {
     progress[p.id] = p;
     if (p.phase === "download") {

@@ -48,8 +48,13 @@ See README.md for the folder layout, update-conflict rules, and code map.
   own. A real copy hasn't been tried yet.
   (Settings > "Export settings report" writes a read-only, masked report to `reports\`.) Writes must: back up first, refuse while the
   game runs, validate the format, and stop on unknown formats.
-- Phase 3 (server browser + join) is blocked until the game devs document a server-info
-  query and join method. Placeholder: `internal/servers`.
+- Phase 3 server browser is built for Project Reclaimer (owner went ahead without the
+  devs): `internal/servers` asks each discovery address for its status over QUIC
+  (`{"status":2}`, protocol in `docs/server-browser.md`), Servers page lists them, Join
+  starts the client with `reclaimer://join/host:port`. Never send the join request
+  (`nickname`/`public_key`) from the launcher. Live check: `RECLAIMED_LIVE=1 go test -run
+  Live ./internal/servers/`. A real Join from the launcher hasn't been tried yet.
+  Reach Renaissance has no public server list.
 
 ## Commands (Windows, PowerShell)
 
