@@ -1,4 +1,4 @@
-# Rally: a launcher for Project Reclaimer and Reach Renaissance
+# Reclaimed: a launcher for Project Reclaimer and Reach Renaissance
 
 An unofficial Windows launcher for two fan-made clients that run on top of
 Steam's *Halo: The Master Chief Collection*. It installs each game from its
@@ -14,7 +14,7 @@ trademarks and artwork, which belong to Microsoft.
 
 | Need | Why Wails |
 |---|---|
-| One exe, no installer | Go builds a static binary and Wails embeds the UI: `Rally.exe` is about 13 MB. |
+| One exe, no installer | Go builds a static binary and Wails embeds the UI: `Reclaimed.exe` is about 13 MB. |
 | Polished UI | The UI is HTML/CSS rendered by WebView2 (the Edge engine already on Windows 10/11), so the dark MCC-style layout is plain CSS. |
 | Windows system access | `golang.org/x/sys/windows` gives the registry (finding Steam), process listing (is the game running?), known folders, and exe version info without cgo. |
 | Safe file handling | Go's standard library covers SHA-256, zip extraction (with zip-slip checks), HTTP and atomic renames. |
@@ -30,13 +30,13 @@ the launcher's folder.
 
 ## Folder layout
 
-Put `Rally.exe` in its own folder, e.g. `C:\Games\Rally\`. It refuses to work
+Put `Reclaimed.exe` in its own folder, e.g. `C:\Games\Reclaimed\`. It refuses to work
 from Program Files, and Reach Renaissance won't install if that folder is inside
 MCC's folder. The launcher only writes inside its own folder:
 
 ```
-Rally\
-  Rally.exe
+Reclaimed\
+  Reclaimed.exe
   games\
     reclaimer\             project-reclaimer-client-v<ver>.exe
     reach-renaissance\     unzipped release (Reach Renaissance.exe ...)
@@ -102,7 +102,7 @@ The frontend is static files in `frontend/dist`, so no npm step is needed.
 wails build -platform windows/amd64 -skipbindings -trimpath -ldflags "-s -w" -webview2 embed
 ```
 
-Output: `build/bin/Rally.exe`. It isn't code-signed, so SmartScreen will warn
+Output: `build/bin/Reclaimed.exe`. It isn't code-signed, so SmartScreen will warn
 the first time.
 
 Tests (run on any OS; the Windows-only parts have stubs):

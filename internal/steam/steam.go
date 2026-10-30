@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"rally/internal/vdf"
+	"reclaimed/internal/vdf"
 )
 
 // MCCAppID is Steam's app id for Halo: The Master Chief Collection.

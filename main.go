@@ -12,8 +12,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"rally/internal/art"
-	"rally/internal/paths"
+	"reclaimed/internal/art"
+	"reclaimed/internal/paths"
 )
 
 //go:embed all:frontend/dist
@@ -29,7 +29,7 @@ func main() {
 	app := NewApp(l)
 
 	err = wails.Run(&options.App{
-		Title:            "Rally",
+		Title:            "Reclaimed",
 		Width:            1180,
 		Height:           740,
 		MinWidth:         960,
@@ -43,7 +43,7 @@ func main() {
 		Logger:           logger.NewFileLogger(filepath.Join(l.Data, "launcher.log")),
 		LogLevel:         logger.INFO,
 		SingleInstanceLock: &options.SingleInstanceLock{
-			UniqueId: "rally-launcher-5f0c2a",
+			UniqueId: "reclaimed-launcher-5f0c2a",
 			OnSecondInstanceLaunch: func(options.SecondInstanceData) {
 				runtime.WindowUnminimise(app.ctx)
 				runtime.Show(app.ctx)

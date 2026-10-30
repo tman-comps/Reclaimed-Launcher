@@ -40,7 +40,7 @@ var ipLike = regexp.MustCompile(`\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
 // Build writes a report to dir and returns its path.
 func Build(dir string, targets []Target) (string, error) {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Rally launcher settings report\nGenerated %s\n", time.Now().Format(time.RFC1123))
+	fmt.Fprintf(&b, "Reclaimed Launcher settings report\nGenerated %s\n", time.Now().Format(time.RFC1123))
 	b.WriteString("Read-only scan. Long strings, addresses and secret-looking values are masked.\n")
 	b.WriteString("Lines marked * look like keybind/video/audio settings.\n")
 	for _, t := range targets {

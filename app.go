@@ -11,21 +11,21 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"rally/internal/discovery"
-	"rally/internal/games"
-	"rally/internal/paths"
-	"rally/internal/proc"
-	"rally/internal/release"
-	"rally/internal/report"
-	"rally/internal/servers"
-	"rally/internal/state"
-	"rally/internal/steam"
+	"reclaimed/internal/discovery"
+	"reclaimed/internal/games"
+	"reclaimed/internal/paths"
+	"reclaimed/internal/proc"
+	"reclaimed/internal/release"
+	"reclaimed/internal/report"
+	"reclaimed/internal/servers"
+	"reclaimed/internal/state"
+	"reclaimed/internal/steam"
 )
 
 // Version of the launcher itself.
-const Version = "0.2.2"
+const Version = "0.3.0"
 
-const userAgent = "RallyLauncher/" + Version
+const userAgent = "ReclaimedLauncher/" + Version
 
 // LauncherInfo describes the launcher's own folder.
 type LauncherInfo struct {
@@ -69,7 +69,7 @@ func NewApp(l paths.Layout) *App {
 	st, err := state.Open(filepath.Join(l.Data, "state.json"))
 	if err != nil {
 		a.problem = "can't read launcher state: " + err.Error()
-		st, _ = state.Open(filepath.Join(os.TempDir(), "rally-state-unavailable.json"))
+		st, _ = state.Open(filepath.Join(os.TempDir(), "reclaimed-state-unavailable.json"))
 	}
 	a.store = st
 	a.mgr = games.NewManager(l, st, release.NewClient(userAgent), userAgent, a.MCC)

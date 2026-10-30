@@ -30,7 +30,7 @@ const mock = fs.readFileSync(path.join(__dirname, "mock.js"), "utf8");
   for (const [name, s, fn, o = {}] of shots) {
     if (o.art && !artDir) continue;
     const page = await browser.newPage({ viewport: { width: o.w || 1180, height: o.h || 740 } });
-    await page.addInitScript(`try { localStorage.setItem("rally.layout", ${JSON.stringify(o.layout || "banners")}) } catch {}`);
+    await page.addInitScript(`try { localStorage.setItem("reclaimed.layout", ${JSON.stringify(o.layout || "banners")}) } catch {}`);
     page.on("pageerror", (e) => errors.push(`${name}: ${e.message}`));
     page.on("console", (m) => m.type() === "error" && errors.push(`${name}: ${m.text()}`));
     await page.addInitScript({ content: mock });

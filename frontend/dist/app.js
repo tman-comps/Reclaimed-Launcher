@@ -1,5 +1,5 @@
 "use strict";
-// Rally UI. Talks to the Go side through Wails bindings (window.go.main.App)
+// Reclaimed UI. Talks to the Go side through Wails bindings (window.go.main.App)
 // and events (window.runtime). Text from GitHub is always escaped.
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -10,7 +10,7 @@ let snap = null;
 const progress = {}; // id -> {phase, done, total}
 let openMenu = null;
 let layout = "cards"; // "cards" (portrait, MCC-style) or "banners" (wide header)
-try { layout = localStorage.getItem("rally.layout") || layout; } catch {}
+try { layout = localStorage.getItem("reclaimed.layout") || layout; } catch {}
 
 const ICON = {
   play: '<svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg>',
@@ -251,7 +251,7 @@ function fitCards() {
 
 function setLayout(l) {
   layout = l;
-  try { localStorage.setItem("rally.layout", l); } catch {}
+  try { localStorage.setItem("reclaimed.layout", l); } catch {}
   document.querySelectorAll("#layoutSeg button").forEach((b) => b.classList.toggle("on", b.dataset.layout === l));
   renderTiles();
 }
@@ -321,7 +321,7 @@ function renderSettings() {
     </div>
     <div class="card">
       <h3>Cover art</h3>
-      <p>Built-in covers are included. To use your own, put a file with the name shown below in the <code>art</code> folder next to Rally.exe and it replaces the built-in one; delete it to go back.</p>
+      <p>Built-in covers are included. To use your own, put a file with the name shown below in the <code>art</code> folder next to Reclaimed.exe and it replaces the built-in one; delete it to go back.</p>
       <dl class="kv">
         ${snap.games.map((g) => `<dt>${esc(g.name)}</dt><dd>Portrait: ${esc(g.artTallSrc || "none")} <span class="muted">(${esc(g.id)}-tall.png, 600×900)</span><br>Wide: ${esc(g.artWideSrc || "none")} <span class="muted">(${esc(g.id)}-wide.png, 920×430)</span></dd>`).join("")}
       </dl>

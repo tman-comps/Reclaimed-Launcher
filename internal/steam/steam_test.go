@@ -31,7 +31,7 @@ func TestDetectAcrossLibraries(t *testing.T) {
 	write(t, filepath.Join(mcc, "halo3", "maps", "guardian.map"), "x")
 	write(t, filepath.Join(mcc, "haloreach", "haloreach.dll"), "x") // no maps
 
-	t.Setenv("RALLY_STEAM_ROOT", steamRoot)
+	t.Setenv("RECLAIMED_STEAM_ROOT", steamRoot)
 	info := Detect("")
 	if !info.Found || info.Path != mcc {
 		t.Fatalf("MCC not found: %+v", info)
@@ -48,7 +48,7 @@ func TestDetectAcrossLibraries(t *testing.T) {
 }
 
 func TestDetectNoSteam(t *testing.T) {
-	t.Setenv("RALLY_STEAM_ROOT", "")
+	t.Setenv("RECLAIMED_STEAM_ROOT", "")
 	info := Detect("")
 	if info.Found || info.SteamFound || len(info.Components) != 2 {
 		t.Fatalf("unexpected: %+v", info)

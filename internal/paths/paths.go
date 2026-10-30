@@ -20,10 +20,10 @@ type Layout struct {
 	Art      string // <root>/art (optional user-supplied cover images)
 }
 
-// Resolve builds the layout from the exe location. RALLY_HOME overrides it
+// Resolve builds the layout from the exe location. RECLAIMED_HOME overrides it
 // for development.
 func Resolve() (Layout, error) {
-	root := os.Getenv("RALLY_HOME")
+	root := os.Getenv("RECLAIMED_HOME")
 	if root == "" {
 		exe, err := os.Executable()
 		if err != nil {
@@ -60,7 +60,7 @@ func (l Layout) CheckWritable() error {
 	low := strings.ToLower(l.Root)
 	for _, env := range []string{"ProgramFiles", "ProgramFiles(x86)", "SystemRoot"} {
 		if p := os.Getenv(env); p != "" && strings.HasPrefix(low, strings.ToLower(p)+string(filepath.Separator)) {
-			return errors.New("the launcher is inside " + p + ". Move it to its own folder, e.g. C:\\Games\\Rally, so it can install games next to itself without admin rights")
+			return errors.New("the launcher is inside " + p + ". Move it to its own folder, e.g. C:\\Games\\Reclaimed, so it can install games next to itself without admin rights")
 		}
 	}
 	if err := os.MkdirAll(l.Data, 0o755); err != nil {

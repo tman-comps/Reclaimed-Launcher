@@ -1,4 +1,4 @@
-module rally
+module reclaimed
 
 go 1.26.0
 

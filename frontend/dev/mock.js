@@ -7,7 +7,7 @@
   const games = [
     {
       id: "reclaimer", name: "Project Reclaimer", tagline: "Halo 3 multiplayer client", needsName: "Halo 3",
-      installed: true, linked: false, dir: "C:\\Games\\Rally\\games\\reclaimer", exe: "", version: "1.4.0", versionSource: "launcher",
+      installed: true, linked: false, dir: "C:\\Games\\Reclaimed\\games\\reclaimer", exe: "", version: "1.4.0", versionSource: "launcher",
       updatedInGame: false, latest: "1.5.0", latestUrl: "https://example.invalid", latestNotes: "## Changes\n- Faster map loads\n- **Fixed** a crash when leaving a lobby\n- New `--windowed` option",
       latestPublished: now, latestAsset: "project-reclaimer-client-v1.5.0.exe", latestSize: 48234496, checkedAt: now,
       updateAvailable: true, running: false, requirementOk: true, userDataDir: "C:\\Users\\you\\Documents\\My Games\\Project Reclaimer", userDataExists: true,
@@ -15,7 +15,7 @@
     },
     {
       id: "reach-renaissance", name: "Reach Renaissance", tagline: "Halo: Reach multiplayer, Firefight & Campaign", needsName: "Halo: Reach",
-      installed: false, linked: false, dir: "C:\\Games\\Rally\\games\\reach-renaissance", version: "", versionSource: "", latest: "0.1.4",
+      installed: false, linked: false, dir: "C:\\Games\\Reclaimed\\games\\reach-renaissance", version: "", versionSource: "", latest: "0.1.4",
       latestUrl: "https://example.invalid", latestNotes: "First public test build.", latestPublished: now, latestAsset: "ReachRenaissance-v0.1.4.zip",
       latestSize: 312475648, checkedAt: now, updateAvailable: false, running: false, requirementOk: true,
       userDataDir: "C:\\Users\\you\\AppData\\Local\\ReachRenaissance", userDataExists: false,
@@ -44,7 +44,7 @@
     Object.assign(games[1], { artTall: `${art}/reach-renaissance-tall.png`, artWide: `${art}/reach-renaissance-wide.png` });
   }
   const snap = {
-    launcher: { version: "0.1.0", root: "C:\\Games\\Rally" }, mcc, games, checking: false,
+    launcher: { version: "0.3.0", root: "C:\\Games\\Reclaimed" }, mcc, games, checking: false,
     discovery: scenario === "nomcc" ? { ok: false, error: "both endpoints timed out", fetchedAt: now } : { ok: true, servers: 17, masters: 2, endpoint: "http://148.251.153.44:49175/v3/discovery", fetchedAt: now },
     servers: { available: false, reason: "not available yet: waiting for the game's developers to document a server query and join method",
       needs: ["Project Reclaimer: a documented per-server info query (the discovery list has addresses only) and a join argument or URI", "Reach Renaissance: a public server list API and a join argument or URI"] },
@@ -69,7 +69,7 @@
     CheckForUpdates() {}, RefreshServers: async () => snap.discovery, RedetectMCC: async () => structuredClone(snap),
     ChooseMCCFolder: async () => structuredClone(snap), ResetMCCFolder: async () => structuredClone(snap),
     LinkExisting: async () => structuredClone(snap), Unlink: async () => structuredClone(snap),
-    OpenArtFolder: async () => {}, ExportSettingsReport: async () => "C:\\Games\\Rally\\reports\\settings-report.txt",
+    OpenArtFolder: async () => {}, ExportSettingsReport: async () => "C:\\Games\\Reclaimed\\reports\\settings-report.txt",
   };
   window.go = { main: { App: A } };
 })();
