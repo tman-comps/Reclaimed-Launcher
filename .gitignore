@@ -1,7 +1,8 @@
 build/bin/
 *.exe
-data/
-games/
-reports/
+*.zip
+/data/
+/games/
+/reports/
 /art/
-dist/
+/dist/
