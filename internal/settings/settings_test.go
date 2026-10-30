@@ -84,8 +84,29 @@ func TestReclaimerLoad(t *testing.T) {
 			t.Errorf("%s = %q, want %q", key, got, want)
 		}
 	}
-	if !field(t, p, "field_of_view").ReadOnly || field(t, p, "graphics.display_mode").ReadOnly {
-		t.Error("FOV should be locked and window mode editable")
+	if !field(t, p, "graphics.width").ReadOnly || field(t, p, "field_of_view").ReadOnly || field(t, p, "graphics.frame_limit").ReadOnly {
+		t.Error("window width should be locked; FOV and frame limit editable")
+	}
+	for _, f := range p.Fields {
+		if strings.HasPrefix(f.Key, "mouse") {
+			t.Errorf("mouse settings aren't shown, found %s", f.Key)
+		}
+	}
+}
+
+// FOV is a float in the file (85.0) and frame limit an integer (120).
+func TestReclaimerNumbersKeepTheirType(t *testing.T) {
+	dir, backups := setup(t, "settings.json", reclaimerFile)
+	p := Load("reclaimer", dir)
+	if _, _, err := Save("reclaimer", dir, backups, p.Stamp,
+		map[string]string{"field_of_view": "90", "vehicle_field_of_view": "78", "graphics.frame_limit": "144"}, now); err != nil {
+		t.Fatal(err)
+	}
+	s := read(t, filepath.Join(dir, "settings.json"))
+	for _, want := range []string{`"field_of_view": 90.0,`, `"vehicle_field_of_view": 78.0,`, `"frame_limit": 144,`, `"mouse_sensitivity": 1.5,`} {
+		if !strings.Contains(s, want) {
+			t.Errorf("missing %s in:\n%s", want, s)
+		}
 	}
 }
 
@@ -141,7 +162,9 @@ func TestSaveRefusals(t *testing.T) {
 	p := Load("reclaimer", dir)
 	path := filepath.Join(dir, "settings.json")
 	cases := map[string]map[string]string{
-		"locked field":  {"field_of_view": "90"},
+		"locked field":  {"graphics.width": "1920"},
+		"off the list":  {"field_of_view": "91"},
+		"mouse":         {"mouse_sensitivity": "2"},
 		"invalid value": {"graphics.display_mode": "fullscreen"},
 		"unknown key":   {"graphics.nope": "x"},
 	}

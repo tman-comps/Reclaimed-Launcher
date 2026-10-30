@@ -19,7 +19,9 @@ type lineField struct {
 	options []Option
 }
 
-var reachFOV = same("", "70", "78", "85", "90", "95", "100", "110", "120")
+// fovOptions is Reach Renaissance's field-of-view list; Project Reclaimer
+// uses it too so the two games can share a value.
+var fovOptions = same("", "70", "78", "85", "90", "95", "100", "110", "120")
 
 var reachLevel = opts("low", "Low", "normal", "Normal", "high", "High")
 
@@ -40,8 +42,8 @@ var reachFields = []lineField{
 			"1280x720", "1280 x 720", "1600x900", "1600 x 900", "1920x1080", "1920 x 1080",
 			"2560x1080", "2560 x 1080", "2560x1440", "2560 x 1440", "3440x1440", "3440 x 1440",
 			"3840x2160", "3840 x 2160")...)},
-	{key: "fov", label: "Field of view", group: "Video", def: "78", options: reachFOV},
-	{key: "fov.vehicle", label: "Third-person field of view", group: "Video", def: "78", options: reachFOV},
+	{key: "fov", label: "Field of view", group: "Video", def: "78", options: fovOptions},
+	{key: "fov.vehicle", label: "Third-person field of view", group: "Video", def: "78", options: fovOptions},
 	{key: "fps", label: "Framerate limit", group: "Video", def: "0",
 		options: append(opts("0", "Unlimited"), same(" FPS", "30", "60", "90", "120", "144", "165", "240")...)},
 	{key: "vsync", label: "V-sync", group: "Video", def: "off", options: onOff},

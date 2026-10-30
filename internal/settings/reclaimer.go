@@ -13,15 +13,18 @@ import (
 
 // Project Reclaimer: Documents\My Games\Project Reclaimer\settings.json,
 // pretty-printed JSON with "version": 1. Values for the enums come from the
-// game exe's own text; number ranges aren't known yet, so those fields are
-// shown but locked.
+// game exe's own text. The game doesn't name its number ranges, so field of
+// view and frame limit use lists that hold for any Halo game (the same FOV
+// list as Reach Renaissance, so the two can sync).
 
 type kind int
 
 const (
 	kindString kind = iota
 	kindBool
-	kindNumber
+	kindNumber // shown only
+	kindInt
+	kindFloat  // written with a ".0" when whole, as the game writes floats
 	kindVolume // 0..1 in the file, percent in the UI
 )
 
@@ -34,8 +37,6 @@ type jsonField struct {
 	locked  string // why it can't be changed yet ("" = editable)
 }
 
-const rangeUnknown = "Locked until its range in the game's menu is known; change it in the game."
-
 var percentOptions = same("%", "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100")
 
 var onOff = opts("off", "Off", "on", "On")
@@ -46,13 +47,13 @@ var reclaimerFields = []jsonField{
 	{path: "graphics.render_resolution", label: "Render resolution", group: "Video", kind: kindString,
 		options: opts("r720p", "720p", "r900p", "900p", "r1080p", "1080p", "r1440p", "1440p", "r2160p", "2160p (4K)")},
 	{path: "graphics.vsync", label: "V-sync", group: "Video", kind: kindBool},
-	{path: "graphics.frame_limit", label: "Frame limit", group: "Video", kind: kindNumber, locked: rangeUnknown},
+	// No "unlimited": how the game stores it isn't known.
+	{path: "graphics.frame_limit", label: "Frame limit", group: "Video", kind: kindInt,
+		options: same(" FPS", "30", "60", "90", "120", "144", "165", "240")},
 	{path: "graphics.width", label: "Window width", group: "Video", kind: kindNumber, locked: "Set by resizing the game's window."},
 	{path: "graphics.height", label: "Window height", group: "Video", kind: kindNumber, locked: "Set by resizing the game's window."},
-	{path: "field_of_view", label: "Field of view", group: "Video", kind: kindNumber, locked: rangeUnknown},
-	{path: "vehicle_field_of_view", label: "Vehicle field of view", group: "Video", kind: kindNumber, locked: rangeUnknown},
-	{path: "mouse_sensitivity", label: "Mouse sensitivity", group: "Mouse", kind: kindNumber, locked: rangeUnknown},
-	{path: "mouse_smoothing_ms", label: "Mouse smoothing (ms)", group: "Mouse", kind: kindNumber, locked: rangeUnknown},
+	{path: "field_of_view", label: "Field of view", group: "Video", kind: kindFloat, options: fovOptions},
+	{path: "vehicle_field_of_view", label: "Vehicle field of view", group: "Video", kind: kindFloat, options: fovOptions},
 	{path: "audio.master_volume", label: "Master volume", group: "Audio", kind: kindVolume, options: percentOptions},
 	{path: "audio.muted", label: "Mute all sound", group: "Audio", kind: kindBool},
 	{path: "audio.mute_unfocused", label: "Mute in the background", group: "Audio", kind: kindBool},
@@ -61,7 +62,7 @@ var reclaimerFields = []jsonField{
 
 var reclaimerFormat = format{
 	file:    "settings.json",
-	note:    "Field of view, frame limit and mouse settings are shown but locked until their ranges are known.",
+	note:    "Settings not shown here (mouse, keybinds and others) are left exactly as they are.",
 	missing: "Project Reclaimer hasn't saved its settings yet. Run it once and change any setting in its menu.",
 	parse:   parseReclaimer,
 }
@@ -238,18 +239,35 @@ func encode(f jsonField, v string) (json.RawMessage, error) {
 		return json.Marshal(v)
 	case kindBool:
 		return json.RawMessage(strconv.FormatBool(v == "on")), nil
+	case kindInt:
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("bad number %q", v)
+		}
+		return json.RawMessage(strconv.Itoa(n)), nil
+	case kindFloat:
+		n, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return nil, fmt.Errorf("bad number %q", v)
+		}
+		return json.RawMessage(floatJSON(n)), nil
 	case kindVolume:
 		pct, err := strconv.Atoi(v)
 		if err != nil || pct < 0 || pct > 100 {
 			return nil, fmt.Errorf("bad volume %q", v)
 		}
-		s := strconv.FormatFloat(float64(pct)/100, 'f', -1, 64)
-		if !strings.Contains(s, ".") {
-			s += ".0"
-		}
-		return json.RawMessage(s), nil
+		return json.RawMessage(floatJSON(float64(pct) / 100)), nil
 	}
 	return nil, errors.New("this setting can't be changed here")
+}
+
+// floatJSON writes a float the way the game does: 90.0, 0.5.
+func floatJSON(n float64) string {
+	s := strconv.FormatFloat(n, 'f', -1, 64)
+	if !strings.Contains(s, ".") {
+		s += ".0"
+	}
+	return s
 }
 
 // object is a JSON object that keeps its keys in file order.

@@ -27,14 +27,14 @@ Folder: `Documents\My Games\Project Reclaimer`
 
 | Key | Example | Valid values |
 |---|---|---|
-| `field_of_view` | `85` | number (range unknown) |
-| `vehicle_field_of_view` | `70` | number (range unknown) |
-| `mouse_sensitivity` | `1.5` | number (range unknown) |
-| `mouse_smoothing_ms` | `6` | number (range unknown) |
+| `field_of_view` | `85.0` | float; the launcher offers Reach's list, 70 to 120 |
+| `vehicle_field_of_view` | `70.0` | float; same list |
+| `mouse_sensitivity` | `1.5` | float, scale unknown (not shown, by the owner's choice) |
+| `mouse_smoothing_ms` | `6.0` | float (not shown, by the owner's choice) |
 | `graphics.display_mode` | `"windowed"` | `windowed`, `borderless`, `exclusive_fullscreen` |
 | `graphics.render_resolution` | `"r2160p"` | `r720p`, `r900p`, `r1080p`, `r1440p`, `r2160p` |
 | `graphics.width`, `graphics.height` | `3840`, `2160` | numbers (window size) |
-| `graphics.frame_limit` | `120` | number (range unknown) |
+| `graphics.frame_limit` | `120` | integer; the launcher offers 30 to 240 (how "unlimited" is stored is unknown) |
 | `graphics.vsync` | `true` | bool |
 | `audio.master_volume` | `1` | number, presumably 0 to 1 |
 | `audio.muted`, `audio.mute_unfocused`, `audio.main_menu_music` | `false`/`true` | bool |
