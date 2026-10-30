@@ -35,9 +35,14 @@ See README.md for the folder layout, update-conflict rules, and code map.
   plus a browser preview with a mock backend). The first real run needs checking:
   MCC detection, a real install of both games, Play, the live server count, and the
   frameless window controls.
-- Phase 2 (settings pages/sync) is NOT started. The first real settings report has been
-  read and the formats are written up in `docs/settings-formats.md`; build from that.
-  (Settings > "Export settings report" writes a new read-only, masked report to `reports\`.) Writes must: back up first, refuse while the
+- Phase 2 settings pages are built (`internal/settings`, Settings > Game settings), from the
+  formats in `docs/settings-formats.md`. Reading was checked on the real PC; **a real Save
+  hasn't been tried yet** (only unit tests write). Saving writes the game's own settings
+  file, the one owner-approved write outside the launcher folder: refused while the game
+  runs or if the file changed since loading, unknown keys kept, backup to
+  `data\backups\<game>\` first. Reclaimer FOV/frame limit/mouse stay locked until their
+  ranges are known. Settings sync between the games is NOT started.
+  (Settings > "Export settings report" writes a read-only, masked report to `reports\`.) Writes must: back up first, refuse while the
   game runs, validate the format, and stop on unknown formats.
 - Phase 3 (server browser + join) is blocked until the game devs document a server-info
   query and join method. Placeholder: `internal/servers`.

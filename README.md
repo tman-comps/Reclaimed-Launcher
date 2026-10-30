@@ -56,6 +56,13 @@ It only reads these locations: the Steam registry keys and `libraryfolders.vdf`,
 `appmanifest_976730.acf`, the MCC folder,
 `Documents\My Games\Project Reclaimer`, and `%LOCALAPPDATA%\ReachRenaissance`.
 
+The one exception to "only writes inside its own folder" is when you press Save
+under Settings > Game settings: the launcher then writes that game's own
+settings file (`settings.json` or `settings.txt` in the folders above). It
+refuses while the game runs or if the file changed since it was shown, keeps
+every setting it doesn't know, and first copies the old file to
+`data\backups\<game>\` (the last 20 are kept).
+
 "Use an existing install..." links a copy you already have elsewhere. The
 launcher then only launches that copy and never writes to its folder. Updates
 for it come from the game's own updater.
@@ -138,16 +145,17 @@ node frontend/dev/preview.js <screenshot-dir>
 | `internal/games` | Game definitions, status and version detection, install/launch |
 | `internal/proc` | Running-process check, launch, exe version info |
 | `internal/discovery` | Reclaimer public server count |
-| `internal/report` | Read-only settings-folder scan (Phase 2 investigation) |
+| `internal/settings` | Each game's settings file: read, validate, back up, write (Phase 2) |
+| `internal/report` | Read-only settings-folder scan |
 | `internal/art` | Built-in cover images and `art\` overrides |
 | `internal/servers` | **Phase 3 placeholder:** server browser and join interfaces, inactive |
 
 ## Roadmap
 
-- **Phase 2: settings.** Waiting on the format investigation. Settings > "Export
-  settings report" scans both games' folders read-only and masks secrets. Writes
-  will require a backup first, will be refused while the game runs, and will
-  stop on any unrecognised format.
+- **Phase 2: settings.** Settings > Game settings edits each game's video, graphics,
+  mouse and audio settings (formats in `docs/settings-formats.md`). Project
+  Reclaimer's field of view, frame limit and mouse settings are shown but locked
+  until their ranges are known. Syncing settings between the games comes next.
 - **Phase 3: server browser and join.** Blocked until each game documents a
   server-info query and a join method. Add `servers.Source`/`servers.Joiner`
   implementations and the Servers page will use them.

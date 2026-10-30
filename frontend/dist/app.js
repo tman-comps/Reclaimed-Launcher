@@ -318,10 +318,10 @@ function renderSettings() {
         <button class="btn small" data-act="redetect">Detect again</button>
       </div>
     </div>
-    <div class="card locked">
-      <div class="row"><h3 style="flex:1">Game settings &amp; sync</h3><span class="tag">Investigating</span></div>
-      <p>Per-game settings pages (keybinds, video, audio) and syncing FOV, sensitivity, resolution and FPS cap come once each game's settings files have been checked. Nothing is ever written to them yet.</p>
-      <p>Export a read-only report of what's in each game's settings folder (secrets and addresses masked) so the formats can be reviewed:</p>
+    <div id="gsHost"></div>
+    <div class="card">
+      <h3>Settings report</h3>
+      <p>Export a read-only report of what's in each game's settings folder (secrets and addresses masked), to check a format the launcher doesn't know yet:</p>
       <div class="row" style="margin-top:12px"><button class="btn small" data-act="report">Export settings report</button></div>
     </div>
     <div class="card">
@@ -337,10 +337,134 @@ function renderSettings() {
       <dl class="kv">
         <dt>Version</dt><dd>${esc(L.version)}</dd>
         <dt>Folder</dt><dd>${esc(L.root)}</dd>
-        <dt>Writes only to</dt><dd>games\\, data\\, reports\\, art\\ inside that folder</dd>
+        <dt>Writes only to</dt><dd>games\\, data\\, reports\\, art\\ inside that folder, and a game's own settings file when you press Save under Game settings</dd>
       </dl>
       <p style="margin-top:12px">Not affiliated with Microsoft, Halo Studios, 343 Industries, Bungie, or either game's developers.</p>
     </div>`;
+  // The game settings card lives outside this redraw so unsaved choices survive it.
+  $("#gsHost").replaceWith(gsCard());
+  gsRefreshRunning();
+}
+
+// ------------------------------------------------------- game settings
+// One card for each game's own settings file. Edits stay in gs.edits until
+// Save; the Go side checks the file is unchanged, backs it up, then writes.
+const gs = { el: null, id: "reclaimer", pages: {}, edits: {}, running: {}, loading: {}, saving: false };
+
+function gsCard() {
+  if (!gs.el) {
+    gs.el = document.createElement("div");
+    gs.el.className = "card";
+    gs.el.addEventListener("change", (e) => { if (e.target.matches("select[data-key]")) gsChange(e.target.dataset.key, e.target.value); });
+    gsRender();
+  }
+  return gs.el;
+}
+
+async function gsLoad(id) {
+  if (gs.loading[id]) return;
+  gs.loading[id] = true;
+  try {
+    gs.pages[id] = await call("GameSettings", id).catch(() => ({ error: "Couldn't read the settings." }));
+    gs.edits[id] = {};
+  } finally {
+    gs.loading[id] = false;
+  }
+  if (id === gs.id) gsRender();
+}
+
+// Redraw only when a game starts or stops, so an open dropdown isn't closed.
+function gsRefreshRunning() {
+  let changed = false;
+  for (const g of snap.games) {
+    const r = !!(g.installed && g.running);
+    if (gs.running[g.id] !== r) { gs.running[g.id] = r; changed = true; }
+  }
+  if (changed) gsRender();
+}
+
+const gsShown = (f) => gs.edits[gs.id]?.[f.key] ?? f.value;
+
+function gsRender() {
+  if (!gs.el) return;
+  const id = gs.id, p = gs.pages[id], edits = gs.edits[id] || {};
+  const g = snap?.games.find((x) => x.id === id);
+  const tabs = (snap?.games || []).map((x) => `<button class="btn small${x.id === id ? " on" : ""}" data-act="gs-tab" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join("");
+  let body;
+  if (!p) {
+    body = `<p class="muted">Loading…</p>`;
+    gsLoad(id);
+  } else if (p.error) {
+    body = `<p>${esc(p.error)}</p>${p.path ? `<p class="muted">File: ${esc(p.path)}</p>` : ""}
+      <div class="row" style="margin-top:12px"><button class="btn small" data-act="gs-reload">Check again</button></div>`;
+  } else {
+    const groups = [...new Set(p.fields.map((f) => f.group))];
+    const n = Object.keys(edits).length, running = gs.running[id];
+    body = `${p.note ? `<p>${esc(p.note)}</p>` : ""}
+      ${groups.map((grp) => `<div class="gs-group"><h4>${esc(grp)}</h4><div class="gs-grid">
+        ${p.fields.filter((f) => f.group === grp).map(gsRow).join("")}
+      </div></div>`).join("")}
+      ${running ? `<p class="gs-warn">${esc(g?.name ?? id)} is running. Close it to change its settings.</p>` : ""}
+      <div class="row" style="margin-top:16px">
+        <button class="btn small primary" data-act="gs-save"${!n || running || gs.saving ? " disabled" : ""}>${gs.saving ? "Saving…" : n ? `Save ${n} change${n > 1 ? "s" : ""}` : "Save"}</button>
+        <button class="btn small" data-act="gs-undo"${n ? "" : " disabled"}>Undo changes</button>
+        <button class="btn small" data-act="gs-reload">Reload</button>
+        <button class="btn small" data-act="gs-backups">Open backups</button>
+      </div>
+      <p class="muted" style="margin-top:10px">File: ${esc(p.path)} · backed up to data\\backups before every save</p>`;
+  }
+  gs.el.innerHTML = `<div class="row"><h3 style="flex:1">Game settings</h3><div class="row gs-tabs">${tabs}</div></div>${body}`;
+}
+
+function gsRow(f) {
+  const label = `<label for="gs-${esc(f.key)}">${esc(f.label)}</label>`;
+  if (f.readOnly || !f.options?.length) {
+    return `${label}<div class="ro" title="${esc(f.note || "")}">${esc(f.value || "—")}${f.note ? ` <span class="muted">· ${esc(f.note)}</span>` : ""}</div>`;
+  }
+  const v = gsShown(f), changed = v !== f.value;
+  return `${label}<select id="gs-${esc(f.key)}" data-key="${esc(f.key)}"${changed ? ' class="changed"' : ""}>
+    ${f.options.map((o) => `<option value="${esc(o.value)}"${o.value === v ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
+  </select>`;
+}
+
+// gsSet records one field's choice (dropping it when back at the file's value).
+function gsSet(key, v) {
+  const p = gs.pages[gs.id], f = p.fields.find((x) => x.key === key), edits = (gs.edits[gs.id] ||= {});
+  if (!f) return;
+  if (v === f.value) delete edits[key]; else edits[key] = v;
+}
+
+function gsChange(key, v) {
+  const p = gs.pages[gs.id];
+  gsSet(key, v);
+  // Presets (Reach's graphics quality) set other rows; a changed row sets the
+  // preset to whichever one the rows now match, as the game's menu does.
+  const presets = p.presets || {};
+  if (presets[key]?.[v]) for (const [k, pv] of Object.entries(presets[key][v])) gsSet(k, pv);
+  for (const [pk, table] of Object.entries(presets)) {
+    if (pk === key || !Object.values(table).some((vals) => key in vals)) continue;
+    const shown = (k) => gsShown(p.fields.find((x) => x.key === k));
+    const match = Object.entries(table).find(([, vals]) => Object.entries(vals).every(([k, pv]) => shown(k) === pv));
+    gsSet(pk, match ? match[0] : "custom");
+    const pf = p.fields.find((x) => x.key === pk);
+    if (pf && !match && !pf.options.some((o) => o.value === "custom")) pf.options.push({ value: "custom", label: "Custom" });
+  }
+  gsRender();
+}
+
+async function gsSave() {
+  const id = gs.id, p = gs.pages[id], changes = gs.edits[id] || {};
+  if (!Object.keys(changes).length) return;
+  gs.saving = true; gsRender();
+  try {
+    const r = await call("SaveGameSettings", id, p.stamp, changes);
+    gs.pages[id] = r.page; gs.edits[id] = {};
+    toast(r.backup ? "Settings saved. The old file is backed up." : "Nothing needed changing.", "ok");
+  } catch {
+    await gsLoad(id); // the file may have changed; show what's there now
+  } finally {
+    gs.saving = false; gsRender();
+  }
 }
 
 function renderStatus() {
@@ -397,6 +521,13 @@ async function act(name, id, el) {
     case "reset-mcc": snap = await call("ResetMCCFolder"); return render();
     case "redetect": snap = await call("RedetectMCC"); toast("MCC detection refreshed."); return render();
     case "refresh-servers": snap.discovery = await call("RefreshServers").catch(() => snap.discovery); return render();
+    case "gs-tab": gs.id = id; return gsRender();
+    case "gs-save": return gsSave();
+    case "gs-undo": gs.edits[gs.id] = {}; return gsLoad(gs.id);
+    case "gs-reload":
+      if (Object.keys(gs.edits[gs.id] || {}).length && !confirm("Discard your unsaved changes and reload?")) return;
+      return gsLoad(gs.id);
+    case "gs-backups": return call("OpenSettingsBackups", gs.id).catch(() => {});
     case "report": {
       const p = await call("ExportSettingsReport").catch(() => null);
       if (p) toast(`Report saved: ${p}`, "ok");

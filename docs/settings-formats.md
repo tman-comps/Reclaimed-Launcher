@@ -113,11 +113,14 @@ keep them consistent the same way.
 - Still unknown: Reclaimer's number ranges (FOV, frame limit, sensitivity,
   smoothing). Its in-game settings menu shows them.
 
-## Report scanner issues found
+Both settings pages are built in `internal/settings` as described above.
+
+## Report scanner issues found (fixed)
 
 - Reach Renaissance keeps a WebView2 cache in
   `games\reach-renaissance\bin\menu-overlay.exe.WebView2\`. The scan of the
   game folder spent its 400-file limit there and stopped before the rest.
-  Skip `*.WebView2` folders.
-- `README.txt` files are parsed as `key=value` text, which is noise.
-- The `*` settings hint matches `key` inside `public_key`.
+  `*.WebView2` folders are now skipped.
+- `README.txt` files were parsed as `key=value` text; documentation files
+  are now listed but not read.
+- The `*` settings hint matched `key` inside `public_key`.

@@ -18,6 +18,7 @@ import (
 	"reclaimed/internal/release"
 	"reclaimed/internal/report"
 	"reclaimed/internal/servers"
+	"reclaimed/internal/settings"
 	"reclaimed/internal/state"
 	"reclaimed/internal/steam"
 )
@@ -357,6 +358,65 @@ func (a *App) OpenArtFolder() error {
 
 // OpenURL opens a link in the default browser.
 func (a *App) OpenURL(url string) { runtime.BrowserOpenURL(a.ctx, url) }
+
+// SettingsSaved is the result of a settings save.
+type SettingsSaved struct {
+	Page   settings.Page `json:"page"`
+	Backup string        `json:"backup"` // "" when nothing needed writing
+}
+
+func (a *App) settingsGame(id string) (*games.Def, error) {
+	d := games.ByID(id)
+	if d == nil || !settings.Supported(id) {
+		return nil, errors.New("unknown game")
+	}
+	return d, nil
+}
+
+func (a *App) settingsBackups(id string) string { return filepath.Join(a.L.Data, "backups", id) }
+
+// GameSettings reads a game's own settings file for the Settings page.
+func (a *App) GameSettings(id string) (settings.Page, error) {
+	d, err := a.settingsGame(id)
+	if err != nil {
+		return settings.Page{}, err
+	}
+	return settings.Load(id, d.UserData()), nil
+}
+
+// SaveGameSettings writes changed settings (key -> value) to the game's file,
+// if it still matches the page loaded with stamp. It refuses while the game
+// runs and backs the file up into data\backups first.
+func (a *App) SaveGameSettings(id, stamp string, changes map[string]string) (SettingsSaved, error) {
+	d, err := a.settingsGame(id)
+	if err != nil {
+		return SettingsSaved{}, err
+	}
+	if a.mgr.IsRunning(id) {
+		return SettingsSaved{}, errors.New(d.Name + " is running. Close it first; its settings weren't changed")
+	}
+	p, backup, err := settings.Save(id, d.UserData(), a.settingsBackups(id), stamp, changes, time.Now())
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "settings %s: not saved: %v", id, err)
+		return SettingsSaved{Page: p}, err
+	}
+	if backup != "" {
+		runtime.LogInfof(a.ctx, "settings %s: saved %d change(s) to %s; backup %s", id, len(changes), p.Path, backup)
+	}
+	return SettingsSaved{Page: p, Backup: backup}, nil
+}
+
+// OpenSettingsBackups opens the folder holding a game's settings backups.
+func (a *App) OpenSettingsBackups(id string) error {
+	if _, err := a.settingsGame(id); err != nil {
+		return err
+	}
+	dir := a.settingsBackups(id)
+	if _, err := os.Stat(dir); err != nil {
+		return errors.New("no backups yet: one is made before each save")
+	}
+	return proc.OpenFolder(dir)
+}
 
 // ExportSettingsReport writes a read-only inventory of both games' settings
 // folders into the launcher's reports folder (Phase 2 investigation).
