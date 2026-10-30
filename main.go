@@ -42,6 +42,8 @@ func main() {
 		Bind:             []interface{}{app},
 		Logger:           logger.NewFileLogger(filepath.Join(l.Data, "launcher.log")),
 		LogLevel:         logger.INFO,
+		// Production builds use this level (Wails defaults it to ERROR).
+		LogLevelProduction: logger.INFO,
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: "reclaimed-launcher-5f0c2a",
 			OnSecondInstanceLaunch: func(options.SecondInstanceData) {

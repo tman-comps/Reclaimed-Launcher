@@ -284,6 +284,9 @@ func (a *App) Install(id string) error {
 			if errors.Is(err, context.Canceled) {
 				msg = "cancelled"
 			}
+			runtime.LogErrorf(a.ctx, "install %s: %s", id, msg)
+		} else {
+			runtime.LogInfof(a.ctx, "install %s: done", id)
 		}
 		runtime.EventsEmit(a.ctx, "install-done", map[string]any{"id": id, "error": msg})
 		a.emit()

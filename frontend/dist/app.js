@@ -41,7 +41,12 @@ function toast(msg, kind = "") {
   el.className = `toast ${kind}`;
   el.textContent = msg;
   $("#toasts").append(el);
-  setTimeout(() => el.remove(), kind === "bad" ? 9000 : 4500);
+  // Errors stay until clicked so they can't be missed.
+  if (kind === "bad") {
+    el.title = "Click to dismiss";
+    el.style.cursor = "pointer";
+    el.addEventListener("click", () => el.remove());
+  } else setTimeout(() => el.remove(), 4500);
 }
 async function call(fn, ...args) {
   try {
