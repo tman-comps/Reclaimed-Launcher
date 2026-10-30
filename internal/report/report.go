@@ -129,6 +129,9 @@ func Sniff(name string, data []byte, size int64) string {
 		return "binary"
 	}
 	t := bytes.TrimSpace(data)
+	if len(t) == 0 {
+		return "empty"
+	}
 	if (t[0] == '{' || t[0] == '[') && json.Valid(t) {
 		return "JSON"
 	}

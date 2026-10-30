@@ -14,6 +14,7 @@ func TestSniff(t *testing.T) {
 		"bind w +forward\nfov 90\n":   "console-style cfg (command value)",
 		"\x00\x01\x02":                "binary",
 		"<?xml version=\"1.0\"?><a/>": "XML",
+		"\r\n  \n":                    "empty", // used to panic on t[0]
 	}
 	for in, want := range cases {
 		name := "x.cfg"
