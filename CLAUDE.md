@@ -35,9 +35,9 @@ See README.md for the folder layout, update-conflict rules, and code map.
   plus a browser preview with a mock backend). The first real run needs checking:
   MCC detection, a real install of both games, Play, the live server count, and the
   frameless window controls.
-- Phase 2 (settings pages/sync) is NOT started: first inspect each game's settings files on
-  the PC (Settings > "Export settings report" writes a read-only, masked report to
-  `reports\`), report the formats, then build. Writes must: back up first, refuse while the
+- Phase 2 (settings pages/sync) is NOT started. The first real settings report has been
+  read and the formats are written up in `docs/settings-formats.md`; build from that.
+  (Settings > "Export settings report" writes a new read-only, masked report to `reports\`.) Writes must: back up first, refuse while the
   game runs, validate the format, and stop on unknown formats.
 - Phase 3 (server browser + join) is blocked until the game devs document a server-info
   query and join method. Placeholder: `internal/servers`.
