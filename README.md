@@ -297,3 +297,7 @@ browser. `frontend/dev/preview.js` uses it to take screenshots with Playwright
 | `internal/report` | Read-only settings-folder scan |
 | `internal/art` | Built-in cover images and `art\` overrides |
 | `internal/state`, `internal/paths` | Saved launcher state; the launcher's folder layout |
+
+## License
+
+The launcher's code is under the [MIT License](LICENSE). That covers only this launcher. Project Reclaimer, Reach Renaissance, Halo and the Halo art keep their own owners and terms.
