@@ -138,7 +138,7 @@ function tileHTML(g) {
   if (g.updateAvailable && st !== "busy") chips.push(`<span class="chip warn">Update v${esc(g.latest)}</span>`);
   else if (g.installed && g.latest && !g.updateAvailable && g.versionSource !== "" ) chips.push(`<span class="chip ok">Up to date</span>`);
   if (g.linked) chips.push(`<span class="chip accent" title="${esc(g.dir)}">Linked folder</span>`);
-  if (g.id === "reclaimer") chips.push(serverChip());
+  chips.push(serverChip(g.id));
 
   const top = [];
   if (!g.requirementOk) top.push(`<span class="chip bad">Needs ${esc(g.needsName)}</span>`);
@@ -206,7 +206,14 @@ function whatsNew(g) {
     <span class="wn-text">${lines.slice(0, 4).map(esc).join(" · ")}</span></button>`;
 }
 
-function serverChip() {
+const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
+
+// Servers and players online. Halo 3's players come from asking every server
+// (every few minutes); until then it shows the discovery service's count.
+function serverChip(id) {
+  const p = snap.population?.[id];
+  if (p) return `<span class="chip accent" title="Public servers that answered · updated ${esc(ago(p.at))}"><span class="dot ok live"></span>${plural(p.servers, "server")} online · ${plural(p.players, "player")}</span>`;
+  if (id !== "reclaimer") return `<span class="chip"><span class="dot"></span>Servers…</span>`;
   const d = snap.discovery;
   if (!d || !d.fetchedAt || new Date(d.fetchedAt).getFullYear() < 2000) return `<span class="chip"><span class="dot"></span>Servers…</span>`;
   if (!d.ok) return `<span class="chip warn" title="${esc(d.error)}"><span class="dot warn"></span>Server list offline</span>`;

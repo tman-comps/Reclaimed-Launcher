@@ -17,6 +17,7 @@ import (
 	"reclaimed/internal/games"
 	"reclaimed/internal/paths"
 	"reclaimed/internal/proc"
+	"reclaimed/internal/reachlist"
 	"reclaimed/internal/release"
 	"reclaimed/internal/report"
 	"reclaimed/internal/selfupdate"
@@ -27,7 +28,7 @@ import (
 )
 
 // Version of the launcher itself.
-const Version = "0.5.0"
+const Version = "0.5.1"
 
 const userAgent = "ReclaimedLauncher/" + Version
 
@@ -48,6 +49,17 @@ type Snapshot struct {
 	Games     []games.Status   `json:"games"`
 	Discovery discovery.Result `json:"discovery"`
 	Checking  bool             `json:"checking"`
+	// Population is each game's servers and players online, by game id,
+	// once known.
+	Population map[string]Population `json:"population"`
+}
+
+// Population is how many public servers answered and how many players
+// they hold.
+type Population struct {
+	Servers int       `json:"servers"`
+	Players int       `json:"players"`
+	At      time.Time `json:"at"`
 }
 
 // ServerList is the server browser's state.
@@ -78,6 +90,7 @@ type App struct {
 	browsing bool
 	self     selfupdate.Info
 	updating bool
+	pop      map[string]Population
 }
 
 // NewApp prepares the app; startup errors are shown in the UI, not fatal.
@@ -106,17 +119,25 @@ func (a *App) startup(ctx context.Context) {
 	go func() {
 		a.checkUpdates()
 		a.refreshDiscovery()
+		a.refreshReach()
+		a.RefreshServerList() // counts Halo 3 players for its card
 	}()
 	go a.watchRunning()
 	go func() {
 		t := time.NewTicker(60 * time.Second)
 		defer t.Stop()
-		for {
+		for n := 1; ; n++ {
 			select {
 			case <-ctx.Done():
 				return
 			case <-t.C:
 				a.refreshDiscovery()
+				a.refreshReach()
+				// Halo 3's player count means asking every server, so
+				// only every few minutes (the Servers page can refresh sooner).
+				if n%playersEvery == 0 {
+					a.RefreshServerList()
+				}
 			}
 		}
 	}()
@@ -157,10 +178,14 @@ func (a *App) MCC() steam.MCCInfo {
 func (a *App) Snapshot() Snapshot {
 	a.mu.Lock()
 	s := Snapshot{
-		Launcher:  LauncherInfo{Version: Version, Root: a.L.Root, Problem: a.problem, Update: a.self, Updating: a.updating},
-		MCC:       a.mcc,
-		Discovery: a.dr,
-		Checking:  a.checking,
+		Launcher:   LauncherInfo{Version: Version, Root: a.L.Root, Problem: a.problem, Update: a.self, Updating: a.updating},
+		MCC:        a.mcc,
+		Discovery:  a.dr,
+		Checking:   a.checking,
+		Population: map[string]Population{},
+	}
+	for id, p := range a.pop {
+		s.Population[id] = p
 	}
 	a.mu.Unlock()
 	s.Games = a.mgr.Statuses()
@@ -194,6 +219,33 @@ func (a *App) checkUpdates() {
 	cancel()
 	a.mu.Lock()
 	a.checking = false
+	a.mu.Unlock()
+	a.emit()
+}
+
+// playersEvery is how many minutes apart Halo 3's servers are asked for
+// their player counts in the background.
+const playersEvery = 5
+
+// refreshReach counts Reach Renaissance's servers and players. A failed
+// fetch keeps the last count.
+func (a *App) refreshReach() {
+	ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
+	c := reachlist.Fetch(ctx, a.disc, userAgent)
+	cancel()
+	if !c.OK {
+		runtime.LogInfof(a.ctx, "reach server list: %s", c.Error)
+		return
+	}
+	a.setPopulation("reach-renaissance", Population{Servers: c.Servers, Players: c.Players, At: c.FetchedAt})
+}
+
+func (a *App) setPopulation(id string, p Population) {
+	a.mu.Lock()
+	if a.pop == nil {
+		a.pop = map[string]Population{}
+	}
+	a.pop[id] = p
 	a.mu.Unlock()
 	a.emit()
 }
@@ -445,6 +497,11 @@ func (a *App) browse() {
 	sl.Done = true
 	runtime.LogInfof(a.ctx, "servers: %d of %d answered", sl.Answered, sl.Asked)
 	a.publishServers(sl)
+	players := 0
+	for _, s := range sl.Servers {
+		players += s.Players
+	}
+	a.setPopulation("reclaimer", Population{Servers: sl.Answered, Players: players, At: time.Now()})
 }
 
 // JoinServer starts Project Reclaimer with a join link to addr (host:port).

@@ -146,9 +146,12 @@ registry keys and library files, MCC's folder and the two games' settings folder
 
 - GitHub, for releases;
 - Project Reclaimer's discovery servers, for the server list;
-- each listed Reclaimer server, when the Servers page is opened or refreshed.
-  It asks only for public status (name, map, players). It never sends your
-  name or identity.
+- each listed Reclaimer server, when it starts, every 5 minutes (for the
+  player count on the Halo 3 card) and when the Servers page is opened or
+  refreshed. It asks only for public status (name, map, players). It never
+  sends your name or identity;
+- Reach Renaissance's master server, once a minute, for the server and
+  player count on the Reach card (read-only).
 
 If WebView2 is missing (rare on Windows 10/11), the built-in installer offers
 to add it. That's the only thing ever installed outside the launcher's folder.

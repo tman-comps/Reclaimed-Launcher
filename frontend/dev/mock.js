@@ -46,6 +46,7 @@
   const snap = {
     launcher: { version: "0.4.1", root: "C:\\Games\\Reclaimed",
       update: scenario === "update" ? { latest: "0.5.0", available: true, notes: "## What's new\n- Desktop shortcut and Add to Steam\n- Update Reclaimed from inside the app" } : { latest: "0.4.1", available: false } }, mcc, games, checking: false,
+    population: scenario === "nomcc" ? {} : { reclaimer: { servers: 322, players: 1187, at: now }, "reach-renaissance": { servers: 8, players: 33, at: now } },
     discovery: scenario === "nomcc" ? { ok: false, error: "both endpoints timed out", fetchedAt: now } : { ok: true, servers: 17, masters: 2, endpoint: "http://148.251.153.44:49175/v3/discovery", fetchedAt: now },
   };
   // Server browser rows, shaped like real status replies (docs/server-browser.md).
