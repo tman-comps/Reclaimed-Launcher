@@ -44,7 +44,8 @@
     Object.assign(games[1], { artTall: `${art}/reach-renaissance-tall.png`, artWide: `${art}/reach-renaissance-wide.png` });
   }
   const snap = {
-    launcher: { version: "0.4.1", root: "C:\\Games\\Reclaimed" }, mcc, games, checking: false,
+    launcher: { version: "0.4.1", root: "C:\\Games\\Reclaimed",
+      update: scenario === "update" ? { latest: "0.5.0", available: true, notes: "## What's new\n- Desktop shortcut and Add to Steam\n- Update Reclaimed from inside the app" } : { latest: "0.4.1", available: false } }, mcc, games, checking: false,
     discovery: scenario === "nomcc" ? { ok: false, error: "both endpoints timed out", fetchedAt: now } : { ok: true, servers: 17, masters: 2, endpoint: "http://148.251.153.44:49175/v3/discovery", fetchedAt: now },
   };
   // Server browser rows, shaped like real status replies (docs/server-browser.md).
@@ -133,6 +134,9 @@
         emit("servers", structuredClone(list));
       }, 150 * (i + 1)));
     },
+    CreateDesktopShortcut: async () => "C:\\Users\\you\\Desktop\\Reclaimed.lnk",
+    AddToSteam: async (restart) => ({ status: restart ? "added" : "steam-running" }),
+    UpdateLauncher: async () => { snap.launcher.updating = true; emit("snapshot", structuredClone(snap)); let d = 0; const t = setInterval(() => { d += 0.1; emit("launcher-update", { done: d * 15e6, total: 15e6 }); if (d >= 1) clearInterval(t); }, 150); },
     JoinServer: async (addr) => { if (!/^[A-Za-z0-9.-]{1,253}:\d{1,5}$/.test(addr)) throw "enter the server's address as host:port"; },
   };
   window.go = { main: { App: A } };

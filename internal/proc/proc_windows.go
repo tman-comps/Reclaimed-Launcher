@@ -1,10 +1,14 @@
 package proc
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -75,4 +79,38 @@ func FileVersion(path string) string {
 // OpenFolder shows a folder in Explorer.
 func OpenFolder(dir string) error {
 	return exec.Command("explorer.exe", dir).Start()
+}
+
+// CreateShortcut writes a Windows shortcut (.lnk) at lnk that starts
+// target in workDir, using Windows' own Shell COM object through a hidden
+// PowerShell. The paths go in through environment variables, so nothing in
+// them is read as script.
+func CreateShortcut(lnk, target, workDir, description string) error {
+	const script = `$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:RECLAIMED_LNK)
+$s.TargetPath = $env:RECLAIMED_TARGET
+$s.WorkingDirectory = $env:RECLAIMED_DIR
+$s.IconLocation = $env:RECLAIMED_TARGET + ',0'
+$s.Description = $env:RECLAIMED_DESC
+$s.Save()`
+	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script)
+	cmd.Env = append(os.Environ(),
+		"RECLAIMED_LNK="+lnk, "RECLAIMED_TARGET="+target, "RECLAIMED_DIR="+workDir, "RECLAIMED_DESC="+description)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+	}
+	if _, err := os.Stat(lnk); err != nil {
+		return errors.New("Windows didn't create the shortcut")
+	}
+	return nil
+}
+
+// WaitExit waits until the process pid has exited, at most timeout.
+func WaitExit(pid int, timeout time.Duration) {
+	h, err := windows.OpenProcess(windows.SYNCHRONIZE, false, uint32(pid))
+	if err != nil {
+		return // already gone
+	}
+	defer windows.CloseHandle(h)
+	windows.WaitForSingleObject(h, uint32(timeout.Milliseconds()))
 }

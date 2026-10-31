@@ -60,6 +60,14 @@ See README.md for the folder layout, update-conflict rules, and code map.
   sets borderless fullscreen if the file still has the game's default `windowed`
   (`settings.ApplyFirstRun`, once per game, recorded in `state.json`). It creates Reach's
   `settings.txt` if missing but never creates Reclaimer's `settings.json`.
+- 0.5.0 (owner's request): Create desktop shortcut (`proc.CreateShortcut`, WScript.Shell via
+  hidden PowerShell) and Add to Steam (`steam.AddShortcut` writes the signed-in user's binary
+  `shortcuts.vdf`, `vdf.ParseBinary` keeps unknown entries byte for byte, backup to
+  `data\backups\steam\`, Steam must be closed: the UI asks, then `steam.exe -shutdown` and
+  restart). Both are owner-approved writes outside the launcher folder, only on a click.
+  Self-update (`internal/selfupdate`): banner + Update now, verified against the release's
+  SHA256SUMS.txt, running exe renamed to `.old`, new one started with `--after-update <pid>`
+  (main waits for the old process because of the single-instance lock).
 - v0.4.x is released publicly (Reclaimed.exe + SHA256SUMS.txt); the repo is public.
 - Download page for the owner's non-technical friends: `site/index.html`, served by GitHub
   Pages from the `gh-pages` branch at https://tman-comps.github.io/Reclaimed-Launcher/. After

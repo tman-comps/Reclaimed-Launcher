@@ -82,10 +82,18 @@ function md(src) {
 }
 
 // ---------------------------------------------------------------- banners
+let selfUpdateText = "Downloading…";
+const TIP_KEY = "reclaimed.shortcutTipHidden";
+function tipHidden() { try { return localStorage.getItem(TIP_KEY) === "1"; } catch { return false; } }
+function hideTip() { try { localStorage.setItem(TIP_KEY, "1"); } catch {} renderBanners(); }
 function renderBanners() {
   const b = [];
   const L = snap.launcher, m = snap.mcc;
   if (L.problem) b.push(`<div class="banner bad"><b>Launcher folder:</b> ${esc(L.problem)}</div>`);
+  const U = L.update || {};
+  if (L.updating) b.push(`<div class="banner"><span><b>Updating Reclaimed…</b> ${esc(selfUpdateText)} It restarts by itself when it's done.</span></div>`);
+  else if (U.available) b.push(`<div class="banner"><span><b>Reclaimed ${esc(U.latest)} is available.</b> You have ${esc(L.version)}. Your games and settings stay as they are.</span><span class="spacer"></span><button class="btn small" data-act="launcher-notes">What's new</button><button class="btn small primary" data-act="update-launcher">Update now</button></div>`);
+  if (!tipHidden()) b.push(`<div class="banner"><span><b>Tip:</b> start Reclaimed from your desktop or your Steam library.</span><span class="spacer"></span><button class="btn small" data-act="desktop-shortcut">Desktop shortcut</button><button class="btn small" data-act="add-steam">Add to Steam</button><button class="btn small" data-act="tip-hide" title="Hide this tip (the buttons are also under Settings › Launcher)" aria-label="Hide tip">✕</button></div>`);
   if (!m.found) {
     b.push(`<div class="banner bad"><span><b>MCC not found.</b> ${m.steamFound ? "Steam is installed, but Halo: The Master Chief Collection wasn't found in any Steam library." : "Steam wasn't found."} Both games need the Steam version of MCC.</span><span class="spacer"></span><button class="btn small" data-act="locate-mcc">Locate MCC folder</button><button class="btn small" data-act="redetect">Retry</button></div>`);
   } else {
@@ -412,8 +420,13 @@ function renderSettings() {
       <dl class="kv">
         <dt>Version</dt><dd>${esc(L.version)}</dd>
         <dt>Folder</dt><dd>${esc(L.root)}</dd>
-        <dt>Writes only to</dt><dd>games\\, data\\, reports\\, art\\ inside that folder, and a game's own settings file when you press Save under Game settings</dd>
+        <dt>Writes only to</dt><dd>games\\, data\\, reports\\, art\\ inside that folder; a game's own settings file when you press Save under Game settings (and once, to set borderless fullscreen); and, only when you press the buttons below, a desktop shortcut or Steam's list of non-Steam games (backed up first)</dd>
       </dl>
+      <div class="row" style="margin-top:14px">
+        <button class="btn small" data-act="desktop-shortcut">Create desktop shortcut</button>
+        <button class="btn small" data-act="add-steam">Add to Steam</button>
+        <button class="btn small" data-act="check-launcher">${L.update?.available ? `Update to ${esc(L.update.latest)}` : "Check for a new Reclaimed"}</button>
+      </div>
       <p style="margin-top:12px">Not affiliated with Microsoft, Halo Studios, 343 Industries, Bungie, or either game's developers.</p>
     </div>`;
   // The game settings card lives outside this redraw so unsaved choices survive it.
@@ -674,7 +687,41 @@ async function act(name, id, el) {
       if (p) toast(`Report saved: ${p}`, "ok");
       return;
     }
+    case "tip-hide": return hideTip();
+    case "modal-close": $("#modal").hidden = true; return;
+    case "desktop-shortcut": {
+      const p = await call("CreateDesktopShortcut").catch(() => null);
+      if (p) toast("Shortcut added to your desktop.", "ok");
+      return;
+    }
+    case "add-steam": return addToSteam(false);
+    case "steam-restart": $("#modal").hidden = true; return addToSteam(true);
+    case "launcher-notes": {
+      const U = snap.launcher.update || {};
+      return showModal(`Reclaimed ${U.latest}`, md(U.notes || "No notes.") +
+        `<div class="row" style="margin-top:16px"><span class="spacer"></span><button class="btn small primary" data-act="update-launcher">Update now</button></div>`);
+    }
+    case "check-launcher":
+      if (snap.launcher.update?.available) return act("update-launcher");
+      api.CheckForUpdates();
+      return toast("Checking for a new Reclaimed…");
+    case "update-launcher":
+      $("#modal").hidden = true;
+      selfUpdateText = "Downloading…";
+      return call("UpdateLauncher").catch(() => {});
   }
+}
+
+async function addToSteam(restart) {
+  if (restart) toast("Closing Steam for a moment…");
+  const r = await call("AddToSteam", restart).catch(() => null);
+  if (!r) return;
+  if (r.status === "steam-running") {
+    return showModal("Add Reclaimed to Steam", `<p>Steam has to close for a moment while Reclaimed is added, or Steam would undo it when it closes. Reclaimed closes Steam, adds itself, and opens Steam again.</p>
+      <p class="muted">Close any game you're playing first.</p>
+      <div class="row" style="margin-top:16px"><span class="spacer"></span><button class="btn small" data-act="modal-close">Cancel</button><button class="btn small primary" data-act="steam-restart">Restart Steam and add</button></div>`);
+  }
+  toast(r.status === "exists" ? "Reclaimed is already in your Steam library." : "Added to Steam. Find Reclaimed in your Library (non-Steam games show up there too).", "ok");
 }
 
 function wire() {
@@ -718,6 +765,10 @@ function wire() {
   rt.EventsOn("snapshot", (s) => { snap = s; render(); });
   rt.EventsOn("discovery", (d) => { if (snap) { snap.discovery = d; renderTiles(); } });
   rt.EventsOn("servers", (l) => { sb.list = l; if (sb.el) { sbRows(); sbStatus(); } });
+  rt.EventsOn("launcher-update", (p) => {
+    selfUpdateText = p.total > 0 ? `${Math.floor((p.done / p.total) * 100)}%` : "Downloading…";
+    renderBanners();
+  });
   rt.EventsOn("progress", (p) => {
     progress[p.id] = p;
     if (p.phase === "download") {

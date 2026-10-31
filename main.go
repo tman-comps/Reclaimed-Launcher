@@ -4,6 +4,8 @@ import (
 	"embed"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
@@ -14,6 +16,7 @@ import (
 
 	"reclaimed/internal/art"
 	"reclaimed/internal/paths"
+	"reclaimed/internal/proc"
 )
 
 //go:embed all:frontend/dist
@@ -26,6 +29,13 @@ func main() {
 		os.Exit(1)
 	}
 	os.MkdirAll(l.Data, 0o755)
+	// After a launcher update the new exe is started before the old one has
+	// quit; wait for it, or the single-instance lock would hand over to it.
+	if len(os.Args) == 3 && os.Args[1] == "--after-update" {
+		if pid, err := strconv.Atoi(os.Args[2]); err == nil {
+			proc.WaitExit(pid, 20*time.Second)
+		}
+	}
 	app := NewApp(l)
 
 	err = wails.Run(&options.App{

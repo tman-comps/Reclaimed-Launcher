@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"reclaimed/internal/proc"
 	"reclaimed/internal/release"
 	"reclaimed/internal/report"
+	"reclaimed/internal/selfupdate"
 	"reclaimed/internal/servers"
 	"reclaimed/internal/settings"
 	"reclaimed/internal/state"
@@ -25,7 +27,7 @@ import (
 )
 
 // Version of the launcher itself.
-const Version = "0.4.1"
+const Version = "0.5.0"
 
 const userAgent = "ReclaimedLauncher/" + Version
 
@@ -34,6 +36,9 @@ type LauncherInfo struct {
 	Version string `json:"version"`
 	Root    string `json:"root"`
 	Problem string `json:"problem,omitempty"`
+	// Update is the latest launcher release, from the last check.
+	Update   selfupdate.Info `json:"update"`
+	Updating bool            `json:"updating"`
 }
 
 // Snapshot is everything the UI draws.
@@ -71,6 +76,8 @@ type App struct {
 	cancels  map[string]context.CancelFunc
 	sl       ServerList
 	browsing bool
+	self     selfupdate.Info
+	updating bool
 }
 
 // NewApp prepares the app; startup errors are shown in the UI, not fatal.
@@ -93,6 +100,9 @@ func NewApp(l paths.Layout) *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	if exe, err := a.exe(); err == nil {
+		selfupdate.Cleanup(exe)
+	}
 	go func() {
 		a.checkUpdates()
 		a.refreshDiscovery()
@@ -147,7 +157,7 @@ func (a *App) MCC() steam.MCCInfo {
 func (a *App) Snapshot() Snapshot {
 	a.mu.Lock()
 	s := Snapshot{
-		Launcher:  LauncherInfo{Version: Version, Root: a.L.Root, Problem: a.problem},
+		Launcher:  LauncherInfo{Version: Version, Root: a.L.Root, Problem: a.problem, Update: a.self, Updating: a.updating},
 		MCC:       a.mcc,
 		Discovery: a.dr,
 		Checking:  a.checking,
@@ -174,6 +184,13 @@ func (a *App) checkUpdates() {
 	a.emit()
 	ctx, cancel := context.WithTimeout(a.ctx, 45*time.Second)
 	a.mgr.CheckUpdates(ctx)
+	if info, err := selfupdate.Check(ctx, a.mgr.GH, Version); err == nil {
+		a.mu.Lock()
+		a.self = info
+		a.mu.Unlock()
+	} else {
+		runtime.LogInfof(a.ctx, "launcher update check: %v", err)
+	}
 	cancel()
 	a.mu.Lock()
 	a.checking = false
@@ -611,4 +628,133 @@ func (a *App) ExportSettingsReport() (string, error) {
 		proc.OpenFolder(a.L.Reports)
 	}
 	return p, err
+}
+
+// ---- Shortcuts and launcher updates ---------------------------------------
+
+// exe is the running Reclaimed.exe.
+func (a *App) exe() (string, error) {
+	p, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if r, err := filepath.EvalSymlinks(p); err == nil {
+		p = r
+	}
+	return p, nil
+}
+
+// CreateDesktopShortcut puts a "Reclaimed" shortcut on the desktop (the
+// owner allowed this write outside the launcher's folder). It returns the
+// shortcut's path.
+func (a *App) CreateDesktopShortcut() (string, error) {
+	exe, err := a.exe()
+	if err != nil {
+		return "", err
+	}
+	lnk := filepath.Join(paths.Desktop(), "Reclaimed.lnk")
+	if err := proc.CreateShortcut(lnk, exe, filepath.Dir(exe), "Halo 3 and Halo: Reach launcher"); err != nil {
+		runtime.LogErrorf(a.ctx, "desktop shortcut: %v", err)
+		return "", errors.New("couldn't create the shortcut: " + err.Error())
+	}
+	runtime.LogInfof(a.ctx, "desktop shortcut: %s", lnk)
+	return lnk, nil
+}
+
+// SteamResult is what Add to Steam did. Status is "added", "exists" or
+// "steam-running" (nothing written; ask before restarting Steam).
+type SteamResult struct {
+	Status string `json:"status"`
+}
+
+// AddToSteam adds Reclaimed to the Steam library as a non-Steam game (the
+// owner allowed this write to Steam's shortcut list, which is backed up to
+// data\backups\steam first). Steam must be closed while the list is
+// written; with restartSteam it's shut down, then started again afterwards.
+func (a *App) AddToSteam(restartSteam bool) (SteamResult, error) {
+	root := a.MCC().SteamPath
+	if root == "" {
+		return SteamResult{}, errors.New("Steam wasn't found on this PC")
+	}
+	user, err := steam.CurrentUser(root)
+	if err != nil {
+		return SteamResult{}, err
+	}
+	exe, err := a.exe()
+	if err != nil {
+		return SteamResult{}, err
+	}
+	steamExe := filepath.Join(root, "steam.exe")
+	wasRunning := steamRunning(root)
+	if wasRunning {
+		if !restartSteam {
+			return SteamResult{Status: "steam-running"}, nil
+		}
+		if err := proc.Launch(steamExe, "-shutdown"); err != nil {
+			return SteamResult{}, errors.New("couldn't close Steam: " + err.Error())
+		}
+		for i := 0; i < 60 && steamRunning(root); i++ {
+			time.Sleep(500 * time.Millisecond)
+		}
+		if steamRunning(root) {
+			return SteamResult{}, errors.New("Steam didn't close within 30 seconds (a game may be running); close it yourself and try again. Nothing was changed")
+		}
+	}
+	added, err := steam.AddShortcut(root, user, steam.Shortcut{Name: "Reclaimed", Exe: exe, StartDir: filepath.Dir(exe), Icon: exe},
+		filepath.Join(a.L.Data, "backups", "steam"), time.Now())
+	if wasRunning {
+		proc.Launch(steamExe)
+	}
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "add to Steam: %v", err)
+		return SteamResult{}, err
+	}
+	runtime.LogInfof(a.ctx, "add to Steam: added=%v", added)
+	if !added {
+		return SteamResult{Status: "exists"}, nil
+	}
+	return SteamResult{Status: "added"}, nil
+}
+
+func steamRunning(root string) bool {
+	r, err := proc.RunningIn(root)
+	return err == nil && len(r[root]) > 0
+}
+
+// UpdateLauncher replaces Reclaimed.exe with the latest verified release,
+// then restarts into it. "launcher-update" events carry download progress.
+func (a *App) UpdateLauncher() error {
+	a.mu.Lock()
+	if a.updating || len(a.cancels) > 0 {
+		a.mu.Unlock()
+		return errors.New("wait for the current download to finish")
+	}
+	a.updating = true
+	a.mu.Unlock()
+	defer func() {
+		a.mu.Lock()
+		a.updating = false
+		a.mu.Unlock()
+		a.emit()
+	}()
+	a.emit()
+	exe, err := a.exe()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(a.ctx, 10*time.Minute)
+	defer cancel()
+	err = selfupdate.Apply(ctx, a.mgr.GH, a.mgr.HTTP, userAgent, exe, a.L.Staging, func(done, total int64) {
+		runtime.EventsEmit(a.ctx, "launcher-update", map[string]int64{"done": done, "total": total})
+	})
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "launcher update: %v", err)
+		return errors.New("update failed, nothing was changed: " + err.Error())
+	}
+	runtime.LogInfof(a.ctx, "launcher update: installed %s, restarting", a.self.Latest)
+	if err := proc.Launch(exe, "--after-update", strconv.Itoa(os.Getpid())); err != nil {
+		return errors.New("updated; close Reclaimed and open it again to finish (" + err.Error() + ")")
+	}
+	runtime.Quit(a.ctx)
+	return nil
 }

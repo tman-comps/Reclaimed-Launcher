@@ -53,6 +53,12 @@ for Reach Renaissance. Nothing else gets installed: Reclaimed is one exe.
 - **Already have a game installed?** Use **... > Use an existing install** and
   Reclaimed will only launch it.
 - Two layouts, **Banners** and **Cards**, switched in the title bar.
+- **Desktop shortcut and Add to Steam.** One click each, from the tip on the
+  Play page or Settings › Launcher. Add to Steam puts Reclaimed in your Steam
+  library, so you can start it from Steam (or Big Picture).
+- **Updates itself.** When a new Reclaimed is released, a banner offers
+  **Update now**. It downloads the new exe, checks it against the release's
+  `SHA256SUMS.txt`, swaps it in and restarts. Your games and settings stay.
 
 ![Cards layout](docs/screenshots/play-cards.png)
 
@@ -124,7 +130,16 @@ above), Reclaimed writes that game's own settings file (`settings.json` in
 `Documents\My Games\Project Reclaimer`, or `settings.txt` in
 `%LOCALAPPDATA%\ReachRenaissance`).
 
-It never modifies the games' exes, MCC's files or Steam. It reads the Steam
+Two buttons write elsewhere, and only when you press them:
+
+- **Create desktop shortcut** puts `Reclaimed.lnk` on your desktop.
+- **Add to Steam** adds Reclaimed to your Steam library as a non-Steam game.
+  It writes Steam's list of non-Steam games
+  (`Steam\userdata\<your id>\config\shortcuts.vdf`), after copying the old
+  one to `data\backups\steam\`. Steam has to be closed while it does this,
+  so if Steam is open, Reclaimed asks before closing it and then reopens it.
+
+It never modifies the games' exes or MCC's files. It reads the Steam
 registry keys and library files, MCC's folder and the two games' settings folders.
 
 **On the network**, it talks to:

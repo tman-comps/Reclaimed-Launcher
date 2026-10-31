@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 // processImages on non-Windows hosts reads /proc; it exists so the rest of
@@ -37,3 +38,9 @@ func Launch(exe string, args ...string) error {
 func FileVersion(string) string { return "" }
 
 func OpenFolder(string) error { return errors.New("not supported on this platform") }
+
+func CreateShortcut(lnk, target, workDir, description string) error {
+	return errors.New("not supported on this platform")
+}
+
+func WaitExit(pid int, timeout time.Duration) {}

@@ -13,3 +13,4 @@ func Documents() string { return filepath.Join(os.Getenv("RECLAIMED_FAKE_PROFILE
 func LocalAppData() string {
 	return filepath.Join(os.Getenv("RECLAIMED_FAKE_PROFILE"), "AppData", "Local")
 }
+func Desktop() string { return filepath.Join(os.Getenv("RECLAIMED_FAKE_PROFILE"), "Desktop") }

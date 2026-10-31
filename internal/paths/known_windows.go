@@ -22,3 +22,11 @@ func LocalAppData() string {
 	}
 	return os.Getenv("LOCALAPPDATA")
 }
+
+// Desktop is the user's (possibly OneDrive-redirected) desktop folder.
+func Desktop() string {
+	if p, err := windows.KnownFolderPath(windows.FOLDERID_Desktop, 0); err == nil {
+		return p
+	}
+	return filepath.Join(os.Getenv("USERPROFILE"), "Desktop")
+}
