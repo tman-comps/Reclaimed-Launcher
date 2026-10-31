@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reclaimed: Halo 3 and Halo: Reach launcher</title>
+  <meta name="description" content="One-click launcher for Project Reclaimer (Halo 3) and Reach Renaissance (Halo: Reach) on Steam's Halo: The Master Chief Collection.">
+  <meta property="og:title" content="Reclaimed: Halo 3 and Halo: Reach launcher">
+  <meta property="og:description" content="Install and play Project Reclaimer and Reach Renaissance in a few clicks. Free, for Windows.">
+  <meta property="og:image" content="img/play-banners.png">
+  <link rel="icon" href="img/icon.png">
+  <style>
+    :root {
+      --bg: #06090d;
+      --panel: #0c1118;
+      --panel-2: #121924;
+      --line: rgba(190, 215, 240, 0.10);
+      --line-2: rgba(190, 215, 240, 0.18);
+      --text: #e9eef5;
+      --muted: #94a1b3;
+      --accent: #5cc8ff;
+      --accent-ink: #04121c;
+      --ok: #8fe388;
+      --warn: #ffbf5e;
+      --font: "Bahnschrift", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --cut: 16px;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.6 var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+    img { max-width: 100%; display: block; }
+    a { color: var(--accent); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .wrap { width: min(1080px, 100% - 32px); margin-inline: auto; }
+    .cut {
+      clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+    }
+
+    /* header */
+    header.top { border-bottom: 1px solid var(--line); background: rgba(6, 9, 13, .85); position: sticky; top: 0; z-index: 5; backdrop-filter: blur(8px); }
+    header.top .wrap { display: flex; align-items: center; gap: 12px; height: 56px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .3em; font-size: 14px; color: var(--text); text-decoration: none; }
+    .brand img { width: 24px; height: 24px; }
+    header.top nav { margin-left: auto; display: flex; gap: 20px; font-size: 15px; }
+    header.top nav a { color: var(--muted); text-decoration: none; }
+    header.top nav a:hover { color: var(--text); }
+
+    /* hero */
+    .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+    .hero-art { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; opacity: .38; }
+    .hero-art img { width: 100%; height: 100%; object-fit: cover; }
+    .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6, 9, 13, .35), var(--bg) 92%); }
+    .hero .wrap { position: relative; z-index: 1; padding: 88px 0 72px; text-align: center; }
+    .eyebrow { font-size: 13px; letter-spacing: .28em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin: 0 0 14px; }
+    h1 { font-size: clamp(34px, 6vw, 60px); line-height: 1.08; margin: 0 auto 18px; max-width: 16ch; letter-spacing: .01em; }
+    .lead { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 40em; margin: 0 auto 34px; }
+    .dl {
+      display: inline-flex; align-items: center; gap: 14px;
+      background: var(--accent); color: var(--accent-ink);
+      font-weight: 700; font-size: 20px; letter-spacing: .08em; text-transform: uppercase;
+      padding: 20px 40px; text-decoration: none;
+      transition: filter .15s, transform .15s;
+    }
+    .dl:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .dl svg { width: 26px; height: 26px; }
+    .dl-meta { margin-top: 14px; font-size: 15px; color: var(--muted); }
+    .dl-meta b { color: var(--text); font-weight: 600; }
+
+    section { padding: 72px 0; }
+    section + section { border-top: 1px solid var(--line); }
+    h2 { font-size: clamp(26px, 4vw, 36px); margin: 0 0 10px; }
+    .sub { color: var(--muted); margin: 0 0 36px; max-width: 46em; }
+
+    /* need */
+    .need { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); padding: 22px 24px; }
+    .card h3 { margin: 0 0 6px; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+    .card p { margin: 0; color: var(--muted); font-size: 16px; }
+    .tick { width: 22px; height: 22px; flex: none; border-radius: 50%; background: rgba(143, 227, 136, .14); color: var(--ok); display: grid; place-items: center; font-size: 13px; }
+
+    /* steps */
+    .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; counter-reset: s; }
+    .step { display: grid; grid-template-columns: 64px 1fr; gap: 20px; background: var(--panel); border: 1px solid var(--line); padding: 26px; }
+    .num { width: 52px; height: 52px; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line-2); color: var(--accent); font-weight: 700; font-size: 24px; }
+    .step h3 { margin: 4px 0 8px; font-size: 21px; }
+    .step p { margin: 0 0 10px; color: var(--muted); }
+    .step p:last-child { margin-bottom: 0; }
+    .step strong { color: var(--text); }
+    .key { display: inline-block; padding: 1px 9px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text); font-size: 15px; white-space: nowrap; }
+    .tip { border-left: 3px solid var(--warn); background: rgba(255, 191, 94, .06); padding: 12px 16px; color: var(--text) !important; font-size: 16px; }
+
+    /* SmartScreen illustration */
+    .ss { margin-top: 16px; max-width: 460px; background: #1f5fbf; color: #fff; padding: 22px 24px 18px; font-family: "Segoe UI", system-ui, sans-serif; border-radius: 4px; }
+    .ss .t { font-size: 22px; font-weight: 300; margin: 0 0 10px; }
+    .ss p { color: rgba(255, 255, 255, .9) !important; font-size: 14px; margin: 0 0 8px; }
+    .ss .more { text-decoration: underline; font-size: 14px; position: relative; display: inline-block; }
+    .ss .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    .ss .b { border: 1px solid rgba(255, 255, 255, .7); padding: 5px 18px; font-size: 14px; }
+    .ss .b.hl, .ss .more.hl { outline: 3px solid var(--warn); outline-offset: 3px; }
+    .ss-cap { font-size: 13px !important; color: var(--muted) !important; margin-top: 8px !important; }
+    .ss-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+    .ss-pair .ss { margin-top: 0; }
+
+    /* shots */
+    .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+    figure { margin: 0; }
+    figure img { border: 1px solid var(--line-2); }
+    figcaption { margin-top: 10px; color: var(--muted); font-size: 15px; }
+    figcaption b { color: var(--text); }
+    .wide { grid-column: 1 / -1; }
+
+    /* faq */
+    details { background: var(--panel); border: 1px solid var(--line); padding: 0 22px; margin-bottom: 12px; }
+    summary { cursor: pointer; padding: 18px 0; font-weight: 600; font-size: 18px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; color: var(--accent); font-size: 22px; line-height: 1; }
+    details[open] summary::after { content: "–"; }
+    details p { margin: 0 0 18px; color: var(--muted); }
+
+    .cta { text-align: center; }
+    footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+    footer p { margin: 0 0 8px; }
+
+    @media (max-width: 640px) {
+      header.top nav { display: none; }
+      .hero .wrap { padding: 56px 0 48px; }
+      .hero-art { grid-template-columns: 1fr; }
+      .hero-art img:last-child { display: none; }
+      .dl { width: 100%; justify-content: center; padding: 18px 20px; font-size: 18px; }
+      section { padding: 52px 0; }
+      .step { grid-template-columns: 1fr; gap: 12px; padding: 22px 20px; }
+      .num { width: 44px; height: 44px; font-size: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .dl { transition: none; } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="#"><img src="img/icon.png" alt="">RECLAIMED</a>
+      <nav aria-label="Sections">
+        <a href="#how">How to install</a>
+        <a href="#look">Screenshots</a>
+        <a href="#faq">Questions</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="hero-art" aria-hidden="true">
+        <img src="img/reclaimer-wide.webp" alt="">
+        <img src="img/reach-renaissance-wide.png" alt="">
+      </div>
+      <div class="wrap">
+        <p class="eyebrow">Free launcher for Windows</p>
+        <h1>Halo 3 and Halo: Reach multiplayer, a few clicks away</h1>
+        <p class="lead">Reclaimed installs and runs <strong>Project Reclaimer</strong> (Halo 3) and <strong>Reach Renaissance</strong> (Halo: Reach) for you, keeps them up to date, and shows you which Halo 3 servers are full of players.</p>
+        <a class="dl cut" id="dl" href="https://github.com/tman-comps/Reclaimed-Launcher/releases/latest/download/Reclaimed.exe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 10l6 6 6-6M4 20h16"/></svg>
+          Download for Windows
+        </a>
+        <p class="dl-meta" id="dlMeta"><b>Reclaimed.exe</b> · about 15 MB · Windows 10 or 11</p>
+      </div>
+    </div>
+
+    <section id="need">
+      <div class="wrap">
+        <h2>What you need first</h2>
+        <p class="sub">Reclaimed runs on top of the Halo games you already own on Steam.</p>
+        <div class="need">
+          <div class="card cut"><h3><span class="tick">✓</span>A Windows PC</h3><p>Windows 10 or Windows 11.</p></div>
+          <div class="card cut"><h3><span class="tick">✓</span>Halo: MCC on Steam</h3><p><em>Halo: The Master Chief Collection</em>, bought and installed through Steam.</p></div>
+          <div class="card cut"><h3><span class="tick">✓</span>Halo 3 and/or Halo: Reach</h3><p>Turned on inside MCC. In Steam: right-click MCC, choose <span class="key">Manage</span> then <span class="key">DLC</span>, and tick them.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="wrap">
+        <h2>How to install</h2>
+        <p class="sub">About five minutes, plus the game download. You only do this once.</p>
+        <ol class="steps">
+          <li class="step">
+            <div class="num cut">1</div>
+            <div>
+              <h3>Download Reclaimed</h3>
+              <p>Click the big blue <strong>Download for Windows</strong> button at the top of this page.</p>
+              <p class="tip">Your browser may say the file <strong>"isn't commonly downloaded"</strong>. That's because Reclaimed is new and made by a fan, not because something is wrong. Click <span class="key">Keep</span> (in Edge you may need to click <span class="key">…</span> first, then <span class="key">Keep</span> and <span class="key">Keep anyway</span>).</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="num cut">2</div>
+            <div>
+              <h3>Give it its own folder</h3>
+              <p>Reclaimed keeps the games next to itself, so it needs a folder of its own.</p>
+              <p>On your desktop, <strong>right-click</strong> an empty spot, choose <span class="key">New</span> then <span class="key">Folder</span>, and name it <strong>Reclaimed</strong>. Then open your <strong>Downloads</strong> folder and drag <strong>Reclaimed.exe</strong> into that new folder.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="num cut">3</div>
+            <div>
+              <h3>Open it</h3>
+              <p><strong>Double-click Reclaimed.exe.</strong> The first time, Windows shows a blue box saying <strong>"Windows protected your PC"</strong>. Click <strong>More info</strong>, then <strong>Run anyway</strong>. You won't see this again.</p>
+              <div class="ss-pair" aria-hidden="true">
+                <div class="ss">
+                  <p class="t">Windows protected your PC</p>
+                  <p>Microsoft Defender SmartScreen prevented an unrecognized app from starting…</p>
+                  <span class="more hl">More info</span>
+                  <div class="row"><span class="b">Don't run</span></div>
+                </div>
+                <div class="ss">
+                  <p class="t">Windows protected your PC</p>
+                  <p>App: Reclaimed.exe<br>Publisher: Unknown publisher</p>
+                  <div class="row"><span class="b hl">Run anyway</span><span class="b">Don't run</span></div>
+                </div>
+              </div>
+              <p class="ss-cap">A drawing of what you'll see: first click "More info", then "Run anyway".</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="num cut">4</div>
+            <div>
+              <h3>Install a game and play</h3>
+              <p>Reclaimed finds Halo MCC by itself. Under the game you want, press <span class="key">Install</span> and wait for the download to finish, then press <span class="key">Play</span>.</p>
+              <p>Next time, just open Reclaimed and press Play. When a game has an update, an <span class="key">Update</span> button appears.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="look">
+      <div class="wrap">
+        <h2>What it looks like</h2>
+        <p class="sub">Everything in one window.</p>
+        <div class="shots">
+          <figure class="wide"><img src="img/play-banners.png" alt="Reclaimed's Play page with Project Reclaimer and Reach Renaissance side by side" loading="lazy" width="1180" height="740"><figcaption><b>Play.</b> Install, update and start both games.</figcaption></figure>
+          <figure><img src="img/servers.png" alt="Server browser listing Halo 3 servers with map, mode, players and ping" loading="lazy" width="1180" height="740"><figcaption><b>Servers.</b> See every Halo 3 server and join with one click.</figcaption></figure>
+          <figure><img src="img/game-settings.png" alt="Game settings page with window mode, frame limit and field of view" loading="lazy" width="1180" height="740"><figcaption><b>Game settings.</b> Field of view, frame limit, window mode and volume, without opening the game.</figcaption></figure>
+          <figure class="wide"><img src="img/sync.png" alt="Sync page comparing the settings both games share" loading="lazy" width="1180" height="740"><figcaption><b>Sync.</b> Copy your field of view and other settings from one game to the other.</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="wrap">
+        <h2>Questions</h2>
+        <p class="sub">The things people ask most.</p>
+        <details><summary>Is it safe? Why does Windows warn me?</summary><p>Windows warns about any program that isn't "signed", which costs money every year, so most small fan-made programs show the warning. Reclaimed is open source: anyone can read its code on GitHub. It only downloads the games from their official pages and checks every download before using it.</p></details>
+        <details><summary>Does it cost anything?</summary><p>No. Reclaimed, Project Reclaimer and Reach Renaissance are all free. You do need to own Halo: The Master Chief Collection on Steam.</p></details>
+        <details><summary>Will it mess with my Steam or MCC install?</summary><p>No. It never changes Steam, MCC or the games' files. Everything it downloads goes into the Reclaimed folder you made. The only other thing it touches is each game's own settings file, and only when you change a setting in Reclaimed (it keeps a backup first). The first time it starts a game, it also sets the game to borderless fullscreen if you haven't picked a window mode yourself.</p></details>
+        <details><summary>How do I join my friends?</summary><p>For Halo 3, open the <strong>Servers</strong> tab, find their server and press <strong>Join</strong>, or type its address under Direct Connect. For Halo: Reach, start the game and use its own server browser.</p></details>
+        <details><summary>How do I update Reclaimed itself?</summary><p>Close Reclaimed, download it again from this page, and replace the old Reclaimed.exe in your Reclaimed folder. Your games and settings stay where they are. The games themselves update from inside Reclaimed.</p></details>
+        <details><summary>It says MCC wasn't found.</summary><p>Make sure Halo MCC is installed in Steam and that Steam is installed normally. If MCC is on another drive or folder, go to <strong>Settings</strong> in Reclaimed and press <strong>Choose folder…</strong> to point it at MCC.</p></details>
+        <details><summary>Something went wrong. Where do I get help?</summary><p>Ask whoever sent you this page, or <a href="https://github.com/tman-comps/Reclaimed-Launcher/issues">report a problem on GitHub</a>. It helps to attach the file <strong>data\launcher.log</strong> from your Reclaimed folder.</p></details>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap">
+        <h2>Ready?</h2>
+        <p class="sub" style="margin-inline:auto">Download, put it in a folder, double-click.</p>
+        <a class="dl cut" href="https://github.com/tman-comps/Reclaimed-Launcher/releases/latest/download/Reclaimed.exe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 10l6 6 6-6M4 20h16"/></svg>
+          Download for Windows
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Reclaimed is open source: <a href="https://github.com/tman-comps/Reclaimed-Launcher">source code and all releases on GitHub</a>.</p>
+      <p>Unofficial fan project. Not affiliated with Microsoft, Halo Studios, 343 Industries, Bungie, or the makers of Project Reclaimer or Reach Renaissance. Halo and its artwork are trademarks of Microsoft.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Show the current version and size; the static text and link work without it.
+    (async () => {
+      try {
+        const r = await fetch("https://api.github.com/repos/tman-comps/Reclaimed-Launcher/releases/latest");
+        if (!r.ok) return;
+        const rel = await r.json();
+        const exe = (rel.assets || []).find((a) => a.name === "Reclaimed.exe");
+        if (!exe) return;
+        const mb = Math.round(exe.size / 1048576);
+        const date = new Date(rel.published_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+        document.getElementById("dlMeta").innerHTML =
+          `<b>Version ${rel.tag_name.replace(/^v/, "")}</b> · ${mb} MB · released ${date} · Windows 10 or 11`;
+      } catch {}
+    })();
+  </script>
+</body>
+</html>
