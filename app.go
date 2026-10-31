@@ -28,7 +28,7 @@ import (
 )
 
 // Version of the launcher itself.
-const Version = "0.6.0"
+const Version = "0.6.1"
 
 const userAgent = "ReclaimedLauncher/" + Version
 
@@ -118,29 +118,55 @@ func (a *App) startup(ctx context.Context) {
 	}
 	go func() {
 		a.checkUpdates()
-		a.refreshDiscovery()
-		a.refreshReach()
-		a.RefreshServerList() // counts Halo 3 players for its card
 	}()
 	go a.watchRunning()
-	go func() {
-		t := time.NewTicker(60 * time.Second)
-		defer t.Stop()
-		for n := 1; ; n++ {
+	go a.backgroundChecks(ctx)
+}
+
+// Background server checks (server counts, Reach's list, Halo 3 players)
+// run every checkEvery, and pause while a game is running or the window is
+// minimized: there's no point asking servers while you're playing. When
+// they resume, anything overdue runs at once.
+const (
+	checkEvery = 5 * time.Minute
+	pauseTick  = 15 * time.Second
+)
+
+func (a *App) backgroundChecks(ctx context.Context) {
+	var last time.Time // never: check straight away unless paused
+	paused := false
+	t := time.NewTicker(pauseTick)
+	defer t.Stop()
+	for first := true; ; first = false {
+		if !first {
 			select {
 			case <-ctx.Done():
 				return
 			case <-t.C:
-				a.refreshDiscovery()
-				a.refreshReach()
-				// Halo 3's player count means asking every server, so
-				// only every few minutes (the Servers page can refresh sooner).
-				if n%playersEvery == 0 {
-					a.RefreshServerList()
-				}
 			}
 		}
-	}()
+		p := a.anyGameRunning() || runtime.WindowIsMinimised(ctx)
+		if p != paused {
+			paused = p
+			runtime.LogInfof(ctx, "background server checks %s", map[bool]string{true: "paused", false: "resumed"}[p])
+		}
+		if paused || time.Since(last) < checkEvery {
+			continue
+		}
+		last = time.Now()
+		a.refreshDiscovery()
+		a.refreshReach()
+		a.RefreshServerList() // Halo 3's players: asks every server
+	}
+}
+
+func (a *App) anyGameRunning() bool {
+	for _, d := range games.All {
+		if a.mgr.IsRunning(d.ID) {
+			return true
+		}
+	}
+	return false
 }
 
 // beforeClose asks before quitting mid-install.
@@ -222,10 +248,6 @@ func (a *App) checkUpdates() {
 	a.mu.Unlock()
 	a.emit()
 }
-
-// playersEvery is how many minutes apart Halo 3's servers are asked for
-// their player counts in the background.
-const playersEvery = 5
 
 // refreshReach counts Reach Renaissance's servers and players. A failed
 // fetch keeps the last count.
@@ -515,6 +537,9 @@ func (a *App) JoinServer(addr string) error {
 		return err
 	}
 	runtime.LogInfof(a.ctx, "join: asked Project Reclaimer to join %s", addr)
+	if err := a.store.AddRecent(addr, a.serverName(addr), time.Now()); err != nil {
+		runtime.LogErrorf(a.ctx, "recent servers: %v", err)
+	}
 	go func() { time.Sleep(1500 * time.Millisecond); a.emit() }()
 	return nil
 }
@@ -845,3 +870,36 @@ func (a *App) Friends() []string { return a.store.Friends() }
 
 // SetFriends saves the friend names and returns them as stored.
 func (a *App) SetFriends(names []string) ([]string, error) { return a.store.SetFriends(names) }
+
+// ServerPrefs is the player's starred and recently joined servers.
+type ServerPrefs struct {
+	Favorites []state.SavedServer `json:"favorites"`
+	Recent    []state.SavedServer `json:"recent"`
+}
+
+// SavedServers returns the starred and recently joined servers.
+func (a *App) SavedServers() ServerPrefs {
+	f, r := a.store.ServerPrefs()
+	return ServerPrefs{Favorites: f, Recent: r}
+}
+
+// ToggleFavorite stars or unstars a server and returns the saved lists.
+func (a *App) ToggleFavorite(addr, name string) (ServerPrefs, error) {
+	if !servers.ValidAddress(addr) {
+		return a.SavedServers(), errors.New("not a server address")
+	}
+	err := a.store.ToggleFavorite(addr, name)
+	return a.SavedServers(), err
+}
+
+// serverName is the name the last browse saw for addr, or "".
+func (a *App) serverName(addr string) string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, s := range a.sl.Servers {
+		if strings.EqualFold(s.Address, addr) {
+			return s.Name
+		}
+	}
+	return ""
+}

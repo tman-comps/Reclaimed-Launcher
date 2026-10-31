@@ -77,6 +77,13 @@ The Servers page then shows which server each friend is on with a **Join**
 button, and the Halo 3 card on the Play page says how many friends are
 playing. The list is saved in `data\state.json`.
 
+**Quick join** picks the busiest open server (has players, isn't full, no
+password) with the best ping, preferring servers on your game version. It's
+on the Servers page and in the Halo 3 card's ••• menu. Click ☆ on a server
+to make it a favorite: favorites sort to the top, and **Recent** shows the
+last servers you joined, with their current player count, one click to
+rejoin.
+
 ![Server browser](docs/screenshots/servers.png)
 
 Reach Renaissance's games aren't listed. It has no supported way for another
@@ -159,8 +166,12 @@ registry keys and library files, MCC's folder and the two games' settings folder
   player count on the Halo 3 card) and when the Servers page is opened or
   refreshed. It asks only for public status (name, map, players). It never
   sends your name or identity;
-- Reach Renaissance's master server, once a minute, for the server and
+- Reach Renaissance's master server, every 5 minutes, for the server and
   player count on the Reach card (read-only).
+
+These background checks pause while either game is running or Reclaimed is
+minimized, and catch up when you come back. Refreshing the Servers page
+yourself always works.
 
 If WebView2 is missing (rare on Windows 10/11), the built-in installer offers
 to add it. That's the only thing ever installed outside the launcher's folder.

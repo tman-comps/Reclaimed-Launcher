@@ -224,6 +224,7 @@ function serverChip(id) {
 function menuHTML(g) {
   const busy = tileState(g) === "busy";
   const items = [];
+  if (g.id === "reclaimer") items.push(`<button data-act="quick-join" ${g.installed ? "" : "disabled"}>Quick join a server</button>`, "<hr>");
   items.push(`<button data-act="open-folder" ${g.installed ? "" : "disabled"}>Open game folder</button>`);
   items.push(`<button data-act="open-data" ${g.userDataExists ? "" : "disabled"} title="${esc(g.userDataDir)}">Open settings &amp; logs folder</button>`);
   items.push(`<button data-act="notes" ${g.latest ? "" : "disabled"}>Release notes${g.latest ? ` (v${esc(g.latest)})` : ""}</button>`);
@@ -289,7 +290,34 @@ function renderTiles() {
 // ---------------------------------------------------------------- pages
 // Project Reclaimer's server browser. Built once, so typing, ticks and scroll
 // survive redraws; only the rows and the status line are redrawn.
-const sb = { el: null, list: null, q: "", hideEmpty: false, hideFull: false, hidePw: false, onlyFriends: false, open: null, friends: [] };
+const sb = { el: null, list: null, q: "", hideEmpty: false, hideFull: false, hidePw: false, onlyFriends: false, onlyFavs: false, open: null, friends: [], saved: { favorites: [], recent: [] } };
+
+// ---- favorite and recently joined servers.
+const isFav = (addr) => sb.saved.favorites.some((f) => f.address.toLowerCase() === addr.toLowerCase());
+async function toggleFav(addr, name) {
+  const r = await call("ToggleFavorite", addr, name).catch(() => null);
+  if (r) sb.saved = r;
+  if (sb.el) { sbRows(); sbSaved(); }
+}
+
+// Quick join: the busiest open server (has players, not full, no password)
+// within the best ping band, preferring servers on the installed version.
+function quickPick() {
+  let L = (sb.list?.servers || []).filter((s) => !s.passwordRequired && s.players > 0 && s.players < s.capacity);
+  const ver = snap.games.find((g) => g.id === "reclaimer")?.version;
+  if (ver && L.some((s) => s.version === ver)) L = L.filter((s) => s.version === ver);
+  for (const max of [80, 130, 200, Infinity]) {
+    const band = L.filter((s) => s.pingMs <= max);
+    if (band.length) return band.sort((a, b) => b.players - a.players || a.pingMs - b.pingMs)[0];
+  }
+  return null;
+}
+function quickJoin() {
+  if (!sb.list?.done && !sb.list?.servers?.length) { api.RefreshServerList(); return toast("Still finding servers; try again in a few seconds."); }
+  const s = quickPick();
+  if (!s) return toast("No open servers with players right now.", "bad");
+  sbJoin(s.address);
+}
 
 // ---- friends: player names to look for on Project Reclaimer servers.
 const friendKey = (n) => n.trim().toLowerCase();
@@ -318,14 +346,17 @@ function renderServers() {
     sb.el.innerHTML = `
       <div class="card">
         <div class="row"><h3 style="flex:1">Project Reclaimer</h3><span class="muted" id="sbStatus"></span>
+          <button class="btn small primary" data-act="quick-join" title="Join the busiest open server with good ping">Quick join</button>
           <button class="btn small" data-act="sb-refresh" id="sbRefresh">Refresh</button></div>
+        <div id="sbSaved" class="sb-saved"></div>
         <div id="sbFriends" class="sb-friends"></div>
         <div class="row sb-tools">
-          <input id="sbSearch" type="search" placeholder="Search server, map, mode or player" autocomplete="off" spellcheck="false">
+          <input id="sbSearch" type="search" placeholder="Search servers or players" title="Matches server name, map, mode or a player's name" autocomplete="off" spellcheck="false">
           <label><input type="checkbox" id="sbEmpty"> Hide empty</label>
           <label><input type="checkbox" id="sbFull"> Hide full</label>
-          <label><input type="checkbox" id="sbPw"> Hide password-protected</label>
-          <label><input type="checkbox" id="sbOnlyFriends"> Only with friends</label>
+          <label title="Hide servers that need a password"><input type="checkbox" id="sbPw"> Hide locked</label>
+          <label><input type="checkbox" id="sbOnlyFriends"> Friends only</label>
+          <label><input type="checkbox" id="sbOnlyFavs"> Favorites only</label>
         </div>
         <div class="sb-list">
           <div class="sb-row sb-head"><div>Server</div><div>Map</div><div>Mode</div><div>Players</div><div>Ping</div><div></div></div>
@@ -342,7 +373,7 @@ function renderServers() {
         <p id="sbReach"></p>
       </div>`;
     $("#sbSearch", sb.el).oninput = (e) => { sb.q = e.target.value.trim().toLowerCase(); sbRows(); };
-    for (const [id, k] of [["sbEmpty", "hideEmpty"], ["sbFull", "hideFull"], ["sbPw", "hidePw"], ["sbOnlyFriends", "onlyFriends"]]) {
+    for (const [id, k] of [["sbEmpty", "hideEmpty"], ["sbFull", "hideFull"], ["sbPw", "hidePw"], ["sbOnlyFriends", "onlyFriends"], ["sbOnlyFavs", "onlyFavs"]]) {
       $(`#${id}`, sb.el).onchange = (e) => { sb[k] = e.target.checked; sbRows(); };
     }
     $("#sbAddr", sb.el).onkeydown = (e) => { if (e.key === "Enter") sbJoin(e.target.value.trim()); };
@@ -355,6 +386,7 @@ function renderServers() {
     $("#serversBody").replaceChildren(sb.el);
     sbRows();
     sbFriends();
+    sbSaved();
   }
   const rp = snap.population?.["reach-renaissance"];
   $("#sbReach", sb.el).textContent = (rp ? `${plural(rp.servers, "server")} online · ${plural(rp.players, "player")}. ` : "") +
@@ -362,6 +394,22 @@ function renderServers() {
   sbStatus();
 }
 
+
+// Recently joined servers (click to join again) and starred servers that
+// didn't answer the last check.
+function sbSaved() {
+  const box = $("#sbSaved", sb.el);
+  if (!box) return;
+  const live = new Map((sb.list?.servers || []).map((s) => [s.address.toLowerCase(), s]));
+  const chip = (x) => {
+    const s = live.get(x.address.toLowerCase());
+    return `<button class="sb-recent" data-act="sb-join" data-addr="${esc(x.address)}" title="Join ${esc(x.address)}">${isFav(x.address) ? "★ " : ""}${esc(s?.name || x.name || x.address)}<span class="muted">${s ? `${s.players}/${s.capacity}` : sb.list?.done ? "not answering" : ""}</span></button>`;
+  };
+  const recent = sb.saved.recent.slice(0, 5);
+  const gone = sb.list?.done ? sb.saved.favorites.filter((f) => !live.has(f.address.toLowerCase())) : [];
+  box.innerHTML = (recent.length ? `<div class="sb-saved-row"><span class="muted">Recent</span>${recent.map(chip).join("")}</div>` : "") +
+    (gone.length ? `<div class="sb-saved-row"><span class="muted">Favorites not answering</span>${gone.map(chip).join("")}</div>` : "");
+}
 // Friends online (with Join) and the saved list (with remove), plus Add.
 function sbFriends() {
   const box = $("#sbFriends", sb.el);
@@ -390,8 +438,9 @@ function sbStatus() {
 
 function sbVisible() {
   const L = sb.list?.servers || [];
-  return L.filter((s) => (!sb.hideEmpty || s.players > 0) && (!sb.hideFull || s.players < s.capacity) && (!sb.hidePw || !s.passwordRequired) &&
-    (!sb.onlyFriends || (s.playerNames || []).some(isFriend)) &&
+  // Starred servers first; otherwise the order the list came in (busiest first).
+  return [...L].sort((a, b) => isFav(b.address) - isFav(a.address)).filter((s) => (!sb.hideEmpty || s.players > 0) && (!sb.hideFull || s.players < s.capacity) && (!sb.hidePw || !s.passwordRequired) &&
+    (!sb.onlyFriends || (s.playerNames || []).some(isFriend)) && (!sb.onlyFavs || isFav(s.address)) &&
     (!sb.q || `${s.name} ${s.hostName} ${s.map} ${s.mode} ${s.variant} ${s.address}`.toLowerCase().includes(sb.q) || sbMatchNames(s).length));
 }
 
@@ -414,7 +463,7 @@ function sbRows() {
     const sub = who.length ? `<span class="who">${who.slice(0, 4).join(", ")}${who.length > 4 ? ` +${who.length - 4}` : ""}</span>`
       : s.hostName ? `<span class="muted">${esc(s.hostName)}</span>` : "";
     return `<div class="sb-row${open ? " open" : ""}" data-addr="${esc(s.address)}" title="Click for details">
-      <div class="n"><b>${s.passwordRequired ? `<span class="tag" title="Needs a password to join">Password</span>` : ""}${esc(s.name)}</b>${sub}</div>
+      <div class="n"><b><button class="fav${isFav(s.address) ? " on" : ""}" data-act="fav-toggle" data-addr="${esc(s.address)}" data-name="${esc(s.name)}" title="${isFav(s.address) ? "Remove from favorites" : "Add to favorites"}" aria-label="Favorite">${isFav(s.address) ? "★" : "☆"}</button>${s.passwordRequired ? `<span class="tag" title="Needs a password to join">Password</span>` : ""}${esc(s.name)}</b>${sub}</div>
       <div>${esc(s.map)}</div>
       <div>${esc(s.mode)}</div>
       <div class="${full ? "full" : s.players ? "live" : "muted"}">${s.players} / ${s.capacity}</div>
@@ -442,7 +491,11 @@ async function sbJoin(addr) {
   if (!g?.installed) return toast("Install Project Reclaimer first (Play tab).", "bad");
   if (!g.requirementOk && !confirm(`${g.requirementMsg}\n\nJoin anyway?`)) return;
   const s = sb.list?.servers?.find((x) => x.address === addr);
-  await call("JoinServer", addr).then(() => toast(`Joining ${s?.name ?? addr}…`, "ok")).catch(() => {});
+  const ok = await call("JoinServer", addr).then(() => true, () => false);
+  if (!ok) return;
+  toast(`Joining ${s?.name ?? addr}…`, "ok");
+  sb.saved = await api.SavedServers().catch(() => sb.saved);
+  if (sb.el) sbSaved();
 }
 
 function renderSettings() {
@@ -730,6 +783,8 @@ async function act(name, id, el) {
     case "reset-mcc": snap = await call("ResetMCCFolder"); return render();
     case "redetect": snap = await call("RedetectMCC"); toast("MCC detection refreshed."); return render();
     case "sb-refresh": return api.RefreshServerList();
+    case "quick-join": return quickJoin();
+    case "fav-toggle": return toggleFav(el.dataset.addr, el.dataset.name);
     case "sb-join": return sbJoin(el.dataset.addr);
     case "sb-direct": return sbJoin($("#sbAddr").value.trim());
     case "friend-add": {
@@ -842,7 +897,7 @@ function wire() {
   rt.EventsOn("discovery", (d) => { if (snap) { snap.discovery = d; renderTiles(); } });
   rt.EventsOn("servers", (l) => {
     sb.list = l;
-    if (sb.el) { sbRows(); sbStatus(); if (l.done) sbFriends(); }
+    if (sb.el) { sbRows(); sbStatus(); if (l.done) { sbFriends(); sbSaved(); } }
     if (l.done && sb.friends.length) renderTiles();
   });
   rt.EventsOn("launcher-update", (p) => {
@@ -885,11 +940,13 @@ async function boot() {
   snap = await api.Snapshot();
   render();
   // The friends list, and any server list the background browse already has.
-  [sb.friends, sb.list] = await Promise.all([api.Friends().catch(() => []), api.ServerList().catch(() => null)]);
+  [sb.friends, sb.list, sb.saved] = await Promise.all([api.Friends().catch(() => []), api.ServerList().catch(() => null),
+    api.SavedServers().catch(() => ({ favorites: [], recent: [] }))]);
+  sb.saved.favorites ||= []; sb.saved.recent ||= [];
   sb.friends ||= [];
   if (sb.list && !sb.list.asked) sb.list = null; // no browse has started yet
   renderTiles();
-  if (sb.el) { sbRows(); sbStatus(); sbFriends(); }
+  if (sb.el) { sbRows(); sbStatus(); sbFriends(); sbSaved(); }
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

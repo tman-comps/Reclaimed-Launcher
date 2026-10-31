@@ -51,6 +51,9 @@
   };
   const tags = ["NoobSlayer", "WartHogWill", "GruntBirthday", "SpartanSam", "NeedlerNed", "ScarabSue", "BanshEEbob", "Plasma Pat", "Sticky Rick", "ODST_Olly", "MongooseMo", "ElitesOnly"];
   let friends = scenario === "friends" ? ["SpartanSam", "Sticky Rick", "Cortana2"] : [];
+  const saved = scenario === "friends"
+    ? { favorites: [{ address: "10.0.0.3:49172", name: "Custom Maps Weekend" }, { address: "10.9.9.9:49175", name: "Old LAN party" }], recent: [{ address: "10.0.0.2:49171", name: "Vote any map" }, { address: "10.0.0.3:49172", name: "Custom Maps Weekend" }] }
+    : { favorites: [], recent: [] };
   // Server browser rows, shaped like real status replies (docs/server-browser.md).
   const servers = [
     ["Example | Big Team Battle 64 Player", "Example Host", "Valhalla", "Capture the Flag", 58, 64, 41],
@@ -140,6 +143,8 @@
     CreateDesktopShortcut: async () => "C:\\Users\\you\\Desktop\\Reclaimed.lnk",
     AddToSteam: async (restart) => ({ status: restart ? "added" : "steam-running" }),
     UpdateLauncher: async () => { snap.launcher.updating = true; emit("snapshot", structuredClone(snap)); let d = 0; const t = setInterval(() => { d += 0.1; emit("launcher-update", { done: d * 15e6, total: 15e6 }); if (d >= 1) clearInterval(t); }, 150); },
+    SavedServers: async () => structuredClone(saved),
+    ToggleFavorite: async (address, name) => { const i = saved.favorites.findIndex((f) => f.address === address); if (i >= 0) saved.favorites.splice(i, 1); else saved.favorites.push({ address, name }); return structuredClone(saved); },
     Friends: async () => [...friends],
     SetFriends: async (l) => (friends = [...new Set(l.map((n) => n.trim()).filter(Boolean))]),
     JoinServer: async (addr) => { if (!/^[A-Za-z0-9.-]{1,253}:\d{1,5}$/.test(addr)) throw "enter the server's address as host:port"; },

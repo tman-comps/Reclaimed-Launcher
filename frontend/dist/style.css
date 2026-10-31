@@ -398,3 +398,16 @@ main { position: relative; overflow: hidden; }
 .sb-name { background: none; border: 1px solid var(--line); color: var(--text); padding: 1px 8px; font-size: 12.5px; }
 .sb-name:hover { border-color: var(--line-2); background: rgba(255,255,255,.03); }
 .sb-name.friend { color: var(--warn); border-color: rgba(255,191,94,.35); }
+
+/* ---------- favorite and recent servers ---------- */
+.sb-row .fav { background: none; border: 0; padding: 0 6px 0 0; color: var(--dim); font-size: 14px; line-height: 1; vertical-align: -1px; }
+.sb-row .fav:hover, .sb-row .fav.on { color: var(--warn); }
+.sb-saved:empty { display: none; }
+.sb-saved { margin-top: 12px; display: grid; gap: 6px; }
+.sb-saved-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; }
+.sb-saved-row > .muted { margin-right: 4px; }
+.sb-recent { display: inline-flex; gap: 8px; align-items: center; max-width: 320px; padding: 3px 10px; background: var(--panel-2); border: 1px solid var(--line-2); color: var(--text); font-size: 12.5px; }
+.sb-recent:hover { border-color: var(--accent); }
+.sb-recent .muted { font-size: 11.5px; }
+.sb-tools { gap: 14px; }
+#sbSearch { min-width: 0; width: 190px; }

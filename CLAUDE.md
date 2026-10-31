@@ -55,10 +55,12 @@ See README.md for the folder layout, update-conflict rules, and code map.
   (`nickname`/`public_key`) from the launcher. Live check: `RECLAIMED_LIVE=1 go test -run
   Live ./internal/servers/`. Join from the launcher worked on the owner's PC (2026-10-30).
   Reach Renaissance's list isn't shown: it has no outside way to join (tested), so the
-  owner put it on hold. Its card does show "N servers online · M players" (owner calls
-  Reach games "servers") from the master's `/v1/servers` (`internal/reachlist`, every 60 s).
-  The Halo 3 card shows the same from a background browse at start and every 5 minutes
-  (`playersEvery`), falling back to the discovery count until that finishes.
+  owner put it on hold. Both cards show "N servers online · M players" (owner calls Reach
+  games "servers"): Reach from its master's `/v1/servers` (`internal/reachlist`), Halo 3
+  from a background browse. `backgroundChecks` runs them (and discovery) every 5 minutes
+  and pauses while a game runs or the window is minimized (owner's request). 0.6.1 adds
+  Quick join (`quickPick` in app.js), favorite servers and the last 8 joined
+  (`state.json` favorites/recent).
 - First-run window mode (owner's request): the first time the launcher starts each game it
   sets borderless fullscreen if the file still has the game's default `windowed`
   (`settings.ApplyFirstRun`, once per game, recorded in `state.json`). It creates Reach's

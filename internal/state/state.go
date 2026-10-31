@@ -34,6 +34,10 @@ type State struct {
 	// Friends are Project Reclaimer player names the server browser
 	// looks for.
 	Friends []string `json:"friends,omitempty"`
+	// Favorites and Recent are Project Reclaimer servers the player starred
+	// or joined.
+	Favorites []SavedServer `json:"favorites,omitempty"`
+	Recent    []SavedServer `json:"recent,omitempty"`
 }
 
 // Store guards State and saves it atomically.
@@ -143,4 +147,50 @@ func (st *Store) save() error {
 		return err
 	}
 	return os.Rename(tmp, st.path)
+}
+
+// SavedServer is a Project Reclaimer server the player starred or joined.
+type SavedServer struct {
+	Address string    `json:"address"`
+	Name    string    `json:"name,omitempty"`
+	At      time.Time `json:"at,omitempty"` // when it was last joined (recent list)
+}
+
+// MaxRecent is how many recently joined servers are kept.
+const MaxRecent = 8
+
+// ServerPrefs returns the starred servers and the recently joined ones
+// (newest first).
+func (st *Store) ServerPrefs() (favorites, recent []SavedServer) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	return append([]SavedServer{}, st.s.Favorites...), append([]SavedServer{}, st.s.Recent...)
+}
+
+// ToggleFavorite stars a server, or unstars it if it was starred.
+func (st *Store) ToggleFavorite(addr, name string) error {
+	return st.Update(func(s *State) {
+		for i, f := range s.Favorites {
+			if strings.EqualFold(f.Address, addr) {
+				s.Favorites = append(s.Favorites[:i], s.Favorites[i+1:]...)
+				return
+			}
+		}
+		if len(s.Favorites) < 200 {
+			s.Favorites = append(s.Favorites, SavedServer{Address: addr, Name: name})
+		}
+	})
+}
+
+// AddRecent records a join, moving the server to the front of the list.
+func (st *Store) AddRecent(addr, name string, now time.Time) error {
+	return st.Update(func(s *State) {
+		out := []SavedServer{{Address: addr, Name: name, At: now}}
+		for _, r := range s.Recent {
+			if !strings.EqualFold(r.Address, addr) && len(out) < MaxRecent {
+				out = append(out, r)
+			}
+		}
+		s.Recent = out
+	})
 }
