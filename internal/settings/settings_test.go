@@ -312,3 +312,82 @@ func TestBackupsArePruned(t *testing.T) {
 		t.Errorf("%d backups kept, want %d", len(m), MaxBackups)
 	}
 }
+
+func TestApplyFirstRun(t *testing.T) {
+	backupCount := func(dir string) int {
+		m, _ := filepath.Glob(filepath.Join(dir, "*.bak"))
+		return len(m)
+	}
+
+	t.Run("reach without a file gets one", func(t *testing.T) {
+		root := t.TempDir()
+		dir, backups := filepath.Join(root, "ReachRenaissance"), filepath.Join(root, "backups")
+		done, err := ApplyFirstRun("reach-renaissance", dir, backups, now)
+		if !done || err != nil {
+			t.Fatal(done, err)
+		}
+		if got := read(t, filepath.Join(dir, "settings.txt")); got != "display=borderless\n" {
+			t.Fatalf("file = %q", got)
+		}
+		if backupCount(backups) != 0 {
+			t.Fatal("nothing to back up")
+		}
+	})
+
+	t.Run("reach keeps the player's choice", func(t *testing.T) {
+		dir, backups := setup(t, "settings.txt", "display=windowed\nmusic=reach\n")
+		done, err := ApplyFirstRun("reach-renaissance", dir, backups, now)
+		if !done || err != nil {
+			t.Fatal(done, err)
+		}
+		// windowed written out is the game's default value, so it's replaced
+		if got := read(t, filepath.Join(dir, "settings.txt")); got != "display=borderless\nmusic=reach\n" {
+			t.Fatalf("file = %q", got)
+		}
+		dir, backups = setup(t, "settings.txt", reachFile)
+		if done, err := ApplyFirstRun("reach-renaissance", dir, backups, now); !done || err != nil {
+			t.Fatal(done, err)
+		}
+		if read(t, filepath.Join(dir, "settings.txt")) != reachFile || backupCount(backups) != 0 {
+			t.Fatal("an already-borderless file was touched")
+		}
+	})
+
+	t.Run("reclaimer without a file waits", func(t *testing.T) {
+		root := t.TempDir()
+		dir := filepath.Join(root, "Project Reclaimer")
+		done, err := ApplyFirstRun("reclaimer", dir, filepath.Join(root, "backups"), now)
+		if done || err != nil {
+			t.Fatal(done, err)
+		}
+		if _, err := os.Stat(dir); !errors.Is(err, os.ErrNotExist) {
+			t.Fatal("the launcher must not create Reclaimer's folder or file")
+		}
+	})
+
+	t.Run("reclaimer default becomes borderless", func(t *testing.T) {
+		dir, backups := setup(t, "settings.json", reclaimerFile)
+		done, err := ApplyFirstRun("reclaimer", dir, backups, now)
+		if !done || err != nil {
+			t.Fatal(done, err)
+		}
+		got := read(t, filepath.Join(dir, "settings.json"))
+		if !strings.Contains(got, `"display_mode": "borderless"`) || !strings.Contains(got, `"future_section"`) {
+			t.Fatalf("file = %s", got)
+		}
+		if backupCount(backups) != 1 {
+			t.Fatal("want one backup")
+		}
+	})
+
+	t.Run("reclaimer keeps exclusive fullscreen", func(t *testing.T) {
+		content := strings.Replace(reclaimerFile, `"windowed"`, `"exclusive_fullscreen"`, 1)
+		dir, backups := setup(t, "settings.json", content)
+		if done, err := ApplyFirstRun("reclaimer", dir, backups, now); !done || err != nil {
+			t.Fatal(done, err)
+		}
+		if read(t, filepath.Join(dir, "settings.json")) != content {
+			t.Fatal("the player's choice was changed")
+		}
+	})
+}

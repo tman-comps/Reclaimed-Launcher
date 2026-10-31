@@ -54,7 +54,13 @@ See README.md for the folder layout, update-conflict rules, and code map.
   starts the client with `reclaimer://join/host:port`. Never send the join request
   (`nickname`/`public_key`) from the launcher. Live check: `RECLAIMED_LIVE=1 go test -run
   Live ./internal/servers/`. Join from the launcher worked on the owner's PC (2026-10-30).
-  Reach Renaissance has no public server list.
+  Reach Renaissance's list isn't shown: it has no outside way to join (tested), so the
+  owner put it on hold.
+- First-run window mode (owner's request): the first time the launcher starts each game it
+  sets borderless fullscreen if the file still has the game's default `windowed`
+  (`settings.ApplyFirstRun`, once per game, recorded in `state.json`). It creates Reach's
+  `settings.txt` if missing but never creates Reclaimer's `settings.json`.
+- v0.4.x is released publicly (Reclaimed.exe + SHA256SUMS.txt); the repo is public.
 
 ## Commands (Windows, PowerShell)
 

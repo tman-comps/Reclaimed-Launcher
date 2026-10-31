@@ -109,6 +109,24 @@ keep them consistent the same way.
   above. Leave a key out (rather than writing its default) when it isn't
   already in the file. Refuse while the game runs or `settings.txt.live`
   looks active.
+
+## First-run window mode
+
+The owner wants both games to open borderless fullscreen by default
+(2026-10-30); both games' own default is `windowed`. Right before the
+launcher first starts a game (`settings.ApplyFirstRun`, called from
+`Manager.BeforeLaunch`), it sets the window mode to `borderless` only if
+the file still has `windowed`, with a backup like any save, then records
+the game in `state.json` (`firstRunDone`) so it never does it again.
+
+- **Reach Renaissance:** a missing `settings.txt` is created with just
+  `display=borderless` (the file holds only changed settings, so that is a
+  complete file, the same as this PC's own).
+- **Project Reclaimer:** a missing `settings.json` is **not** created: the
+  game reports "Unsupported or invalid client settings; not replaced" for
+  files it doesn't accept, and the full set of keys it needs is unknown. The
+  launcher tries again on each Play until the game has written its file.
+
 ## Sync between the games
 
 Settings that mean the same thing in both games, and how values map:

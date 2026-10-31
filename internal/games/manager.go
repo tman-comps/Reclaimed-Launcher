@@ -78,18 +78,21 @@ type latestInfo struct {
 
 // Manager installs, inspects and launches games.
 type Manager struct {
-	L      paths.Layout
-	Store  *state.Store
-	GH     *release.Client
-	HTTP   *http.Client
-	UA     string
-	MCC    func() steam.MCCInfo
-	Defs   []*Def
-	locks  map[string]*sync.Mutex
-	mu     sync.Mutex
-	latest map[string]*latestInfo
-	busy   map[string]string
-	hashes map[string]hashEntry
+	L     paths.Layout
+	Store *state.Store
+	GH    *release.Client
+	HTTP  *http.Client
+	UA    string
+	MCC   func() steam.MCCInfo
+	Defs  []*Def
+	// BeforeLaunch, if set, runs right before Launch starts a game (after
+	// its checks pass).
+	BeforeLaunch func(id string)
+	locks        map[string]*sync.Mutex
+	mu           sync.Mutex
+	latest       map[string]*latestInfo
+	busy         map[string]string
+	hashes       map[string]hashEntry
 }
 
 type hashEntry struct {
@@ -533,6 +536,9 @@ func (m *Manager) Launch(id string) error {
 	exe := m.findExe(d, m.Dir(id), m.Store.Get(id))
 	if exe == "" {
 		return errors.New(d.Name + " isn't installed")
+	}
+	if m.BeforeLaunch != nil {
+		m.BeforeLaunch(id)
 	}
 	return proc.Launch(exe)
 }

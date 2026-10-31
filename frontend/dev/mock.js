@@ -44,7 +44,7 @@
     Object.assign(games[1], { artTall: `${art}/reach-renaissance-tall.png`, artWide: `${art}/reach-renaissance-wide.png` });
   }
   const snap = {
-    launcher: { version: "0.4.0", root: "C:\\Games\\Reclaimed" }, mcc, games, checking: false,
+    launcher: { version: "0.4.1", root: "C:\\Games\\Reclaimed" }, mcc, games, checking: false,
     discovery: scenario === "nomcc" ? { ok: false, error: "both endpoints timed out", fetchedAt: now } : { ok: true, servers: 17, masters: 2, endpoint: "http://148.251.153.44:49175/v3/discovery", fetchedAt: now },
   };
   // Server browser rows, shaped like real status replies (docs/server-browser.md).

@@ -75,6 +75,15 @@ without starting the game: window mode, frame limit, v-sync, field of view
 - Settings the page doesn't show are kept exactly as they are.
 - Saving is refused while the game runs, or if the file changed since it was loaded.
 
+**Borderless fullscreen by default.** Both games start in a window unless
+you change it. The first time Reclaimed starts each game, it switches that
+game to borderless fullscreen, but only if it's still on the game's default
+(windowed); a mode you picked yourself is kept. It does this once per game,
+with a backup like any save. For Project Reclaimer that happens once the game
+has written its settings file (after you first change a setting in its menu),
+because Reclaimed never creates that file itself. Change it any time under
+Game settings or in the game.
+
 ![Game settings](docs/screenshots/game-settings.png)
 
 **Sync** compares the six settings both games share (field of view, vehicle
@@ -105,7 +114,8 @@ Reclaimed\
 ```
 
 There's one exception. When you press **Save** or copy a setting under Game
-settings, Reclaimed writes that game's own settings file (`settings.json` in
+settings, or the first time it starts a game (to set borderless fullscreen,
+above), Reclaimed writes that game's own settings file (`settings.json` in
 `Documents\My Games\Project Reclaimer`, or `settings.txt` in
 `%LOCALAPPDATA%\ReachRenaissance`).
 

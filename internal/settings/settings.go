@@ -66,6 +66,16 @@ type format struct {
 	// missing explains what to do when the file doesn't exist yet.
 	missing string
 	presets map[string]map[string]map[string]string
+	// firstRun is the setting the launcher changes once, before it first
+	// starts the game (ApplyFirstRun).
+	firstRun firstRun
+}
+
+// firstRun sets key to value when it still has the game's own default.
+type firstRun struct {
+	key, value, gameDefault string
+	// create allows writing a new file when the game hasn't made one yet.
+	create bool
 }
 
 var formats = map[string]format{
@@ -151,6 +161,62 @@ func Save(id, dir, backupDir, loaded string, changes map[string]string, now time
 	}
 	pruneBackups(backupDir, f.file, MaxBackups)
 	return Load(id, dir), backup, nil
+}
+
+// ApplyFirstRun makes borderless fullscreen the window mode before the
+// launcher first starts a game (the owner's choice for new players). It only
+// replaces the game's own default (windowed), so a choice the player made in
+// the game is kept, and it backs the file up first like Save. done reports
+// that it needn't be tried again: it's false only while Project Reclaimer
+// hasn't written its settings file yet, which the launcher never creates
+// (the game rejects files it doesn't recognise as its own).
+func ApplyFirstRun(id, dir, backupDir string, now time.Time) (done bool, err error) {
+	f, ok := formats[id]
+	if !ok || f.firstRun.key == "" {
+		return true, nil
+	}
+	fr := f.firstRun
+	path := filepath.Join(dir, f.file)
+	data, err := os.ReadFile(path)
+	missing := errors.Is(err, os.ErrNotExist)
+	switch {
+	case missing && !fr.create:
+		return false, nil
+	case err != nil && !missing:
+		return false, err
+	}
+	d, err := f.parse(data)
+	if err != nil {
+		return true, fmt.Errorf("unrecognised settings format, left alone: %w", err)
+	}
+	var cur *Field
+	for _, fld := range d.fields() {
+		if fld.Key == fr.key {
+			cur = &fld
+			break
+		}
+	}
+	if cur == nil || cur.ReadOnly || cur.Value != fr.gameDefault || !hasOption(cur.Options, fr.value) {
+		return true, nil // the player's own choice, or a file the launcher can't change
+	}
+	if err := d.apply(map[string]string{fr.key: fr.value}); err != nil {
+		return true, err
+	}
+	out := d.bytes()
+	if _, err := f.parse(out); err != nil {
+		return true, fmt.Errorf("internal error: the new file wouldn't be readable (%v); nothing was written", err)
+	}
+	if missing {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return false, err
+		}
+	} else {
+		if _, err := writeBackup(backupDir, f.file, data, now); err != nil {
+			return false, fmt.Errorf("couldn't back up the settings file, so nothing was written: %w", err)
+		}
+		pruneBackups(backupDir, f.file, MaxBackups)
+	}
+	return true, replaceFile(path, out)
 }
 
 func stamp(data []byte) string {

@@ -61,10 +61,11 @@ var reclaimerFields = []jsonField{
 }
 
 var reclaimerFormat = format{
-	file:    "settings.json",
-	note:    "Settings not shown here (mouse, keybinds and others) are left exactly as they are.",
-	missing: "Project Reclaimer hasn't saved its settings yet. Run it once and change any setting in its menu.",
-	parse:   parseReclaimer,
+	file:     "settings.json",
+	note:     "Settings not shown here (mouse, keybinds and others) are left exactly as they are.",
+	missing:  "Project Reclaimer hasn't saved its settings yet. Run it once and change any setting in its menu.",
+	parse:    parseReclaimer,
+	firstRun: firstRun{key: "graphics.display_mode", value: "borderless", gameDefault: "windowed"},
 }
 
 type reclaimerDoc struct {

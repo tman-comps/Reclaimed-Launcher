@@ -27,6 +27,9 @@ type State struct {
 	Version int              `json:"version"`
 	MCCPath string           `json:"mccPath,omitempty"` // manual override
 	Games   map[string]*Game `json:"games"`
+	// FirstRunDone lists games whose first-run settings were applied
+	// (settings.ApplyFirstRun), so they're never applied twice.
+	FirstRunDone map[string]bool `json:"firstRunDone,omitempty"`
 }
 
 // Store guards State and saves it atomically.
@@ -66,6 +69,23 @@ func (st *Store) Get(id string) Game {
 		return *g
 	}
 	return Game{}
+}
+
+// FirstRunDone reports whether a game's first-run settings were applied.
+func (st *Store) FirstRunDone(id string) bool {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	return st.s.FirstRunDone[id]
+}
+
+// SetFirstRunDone records that a game's first-run settings were applied.
+func (st *Store) SetFirstRunDone(id string) error {
+	return st.Update(func(s *State) {
+		if s.FirstRunDone == nil {
+			s.FirstRunDone = map[string]bool{}
+		}
+		s.FirstRunDone[id] = true
+	})
 }
 
 // MCCPath returns the manual MCC override.

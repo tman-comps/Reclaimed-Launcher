@@ -25,7 +25,7 @@ import (
 )
 
 // Version of the launcher itself.
-const Version = "0.4.0"
+const Version = "0.4.1"
 
 const userAgent = "ReclaimedLauncher/" + Version
 
@@ -86,6 +86,7 @@ func NewApp(l paths.Layout) *App {
 	}
 	a.store = st
 	a.mgr = games.NewManager(l, st, release.NewClient(userAgent), userAgent, a.MCC)
+	a.mgr.BeforeLaunch = a.firstRunSettings
 	a.mcc = steam.Detect(st.MCCPath())
 	return a
 }
@@ -323,6 +324,26 @@ func (a *App) Play(id string) error {
 	}
 	go func() { time.Sleep(1500 * time.Millisecond); a.emit() }()
 	return nil
+}
+
+// firstRunSettings makes borderless fullscreen the window mode the first
+// time the launcher starts a game, unless the player already chose one in
+// the game (settings.ApplyFirstRun). Failures are logged and never stop Play.
+func (a *App) firstRunSettings(id string) {
+	d := games.ByID(id)
+	if d == nil || d.UserData == nil || !settings.Supported(id) || a.mgr.Store.FirstRunDone(id) {
+		return
+	}
+	done, err := settings.ApplyFirstRun(id, d.UserData(), a.settingsBackups(id), time.Now())
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "settings %s: first-run window mode not set: %v", id, err)
+	}
+	if done {
+		runtime.LogInfof(a.ctx, "settings %s: first-run window mode checked", id)
+		if err := a.mgr.Store.SetFirstRunDone(id); err != nil {
+			runtime.LogErrorf(a.ctx, "state: %v", err)
+		}
+	}
 }
 
 // Server browser: how many servers are asked at once, and how long each may

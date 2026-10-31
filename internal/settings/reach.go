@@ -96,10 +96,11 @@ func reachPresetValues(name string) map[string]string {
 }
 
 var reachFormat = format{
-	file:    "settings.txt",
-	note:    "Values match Reach Renaissance's own settings menu. Settings left at the game's default aren't written to the file.",
-	missing: "Reach Renaissance hasn't saved any settings yet. Run it once and change any setting in its menu.",
-	parse:   parseReach,
+	file:     "settings.txt",
+	note:     "Values match Reach Renaissance's own settings menu. Settings left at the game's default aren't written to the file.",
+	missing:  "Reach Renaissance hasn't saved any settings yet. Run it once and change any setting in its menu.",
+	parse:    parseReach,
+	firstRun: firstRun{key: "display", value: "borderless", gameDefault: "windowed", create: true},
 	presets: map[string]map[string]map[string]string{"gfx.preset": {
 		"performance": reachPresetValues("performance"),
 		"original":    reachPresetValues("original"),
