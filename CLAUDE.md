@@ -61,6 +61,11 @@ See README.md for the folder layout, update-conflict rules, and code map.
   (`settings.ApplyFirstRun`, once per game, recorded in `state.json`). It creates Reach's
   `settings.txt` if missing but never creates Reclaimer's `settings.json`.
 - v0.4.x is released publicly (Reclaimed.exe + SHA256SUMS.txt); the repo is public.
+- Download page for the owner's non-technical friends: `site/index.html`, served by GitHub
+  Pages from the `gh-pages` branch at https://tman-comps.github.io/Reclaimed-Launcher/. After
+  changing `site/`, publish with `git subtree push --prefix site origin gh-pages` (no Actions
+  workflow: the owner's Git login lacks the `workflow` scope). Its Download button always
+  points at the latest release's `Reclaimed.exe`, so new releases need no site change.
 
 ## Commands (Windows, PowerShell)
 
