@@ -55,7 +55,8 @@ for Reach Renaissance. Nothing else gets installed: Reclaimed is one exe.
 - Two layouts, **Banners** and **Cards**, switched in the title bar.
 - **Desktop shortcut and Add to Steam.** One click each, from the tip on the
   Play page or Settings › Launcher. Add to Steam puts Reclaimed in your Steam
-  library, so you can start it from Steam (or Big Picture).
+  library, with its own cover, banner, page header and logo, so you can start
+  it from Steam (or Big Picture).
 - **Updates itself.** When a new Reclaimed is released, a banner offers
   **Update now**. It downloads the new exe, checks it against the release's
   `SHA256SUMS.txt`, swaps it in and restarts. Your games and settings stay.
@@ -69,6 +70,12 @@ and ping. Search, hide empty, full or password-protected servers, click a row
 for details, and press **Join**. Joining hands the server to the game through
 its own `reclaimer://join/` link. If the game is already open, it switches to
 that server. There's also Direct Connect for a `host:port`.
+
+**Find your friends.** Search by player name, or add your friends' in-game
+names under **Friends** (or click ☆ next to a name in a server's details).
+The Servers page then shows which server each friend is on with a **Join**
+button, and the Halo 3 card on the Play page says how many friends are
+playing. The list is saved in `data\state.json`.
 
 ![Server browser](docs/screenshots/servers.png)
 
@@ -138,6 +145,8 @@ Two buttons write elsewhere, and only when you press them:
   (`Steam\userdata\<your id>\config\shortcuts.vdf`), after copying the old
   one to `data\backups\steam\`. Steam has to be closed while it does this,
   so if Steam is open, Reclaimed asks before closing it and then reopens it.
+  It also puts Reclaimed's library images in `Steam\userdata\<your id>\config\grid\`,
+  but never replaces an image you set yourself.
 
 It never modifies the games' exes or MCC's files. It reads the Steam
 registry keys and library files, MCC's folder and the two games' settings folders.

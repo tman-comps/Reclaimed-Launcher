@@ -196,11 +196,11 @@ main { position: relative; overflow: hidden; }
 /* ---------- server browser ---------- */
 .sb-tools { margin-top: 14px; gap: 16px; font-size: 13px; color: var(--muted); }
 .sb-tools label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-#sbSearch, #sbAddr {
+#sbSearch, #sbAddr, #sbFriendName {
   height: 32px; padding: 0 10px; font: inherit; font-size: 13px; color: var(--text);
   background: var(--panel-2); border: 1px solid var(--line-2); min-width: 260px;
 }
-#sbSearch:focus, #sbAddr:focus { outline: 1px solid var(--accent); }
+#sbSearch:focus, #sbAddr:focus, #sbFriendName:focus { outline: 1px solid var(--accent); }
 .sb-list { margin-top: 14px; border-top: 1px solid var(--line); max-height: 58vh; overflow-y: auto; }
 .sb-row {
   display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(0, 1.3fr) minmax(0, 1.2fr) 80px 64px 72px;
@@ -379,3 +379,22 @@ main { position: relative; overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- friends (server browser) ---------- */
+.sb-friends { margin-top: 14px; padding: 12px 14px; background: var(--panel-2); border: 1px solid var(--line); }
+.sb-friends-head { gap: 10px; align-items: center; font-size: 13px; }
+.sb-friends-head input { width: 240px; }
+.sb-friends-on { margin-top: 10px; display: grid; gap: 6px; }
+.sb-friend { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.sb-friend .muted { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-friend .btn.primary { min-width: 0; padding: 0 16px; }
+.star, .sb-row .who { color: var(--warn); }
+.sb-row .who { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+.sb-friends-off { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; }
+.sb-fchip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 9px; border: 1px solid var(--line-2); background: var(--panel); }
+.sb-fchip button { background: none; border: 0; color: var(--muted); padding: 0 4px; font-size: 11px; }
+.sb-fchip button:hover { color: var(--text); }
+.sb-names { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.sb-name { background: none; border: 1px solid var(--line); color: var(--text); padding: 1px 8px; font-size: 12.5px; }
+.sb-name:hover { border-color: var(--line-2); background: rgba(255,255,255,.03); }
+.sb-name.friend { color: var(--warn); border-color: rgba(255,191,94,.35); }

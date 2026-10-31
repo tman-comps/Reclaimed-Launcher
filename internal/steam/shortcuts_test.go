@@ -1,6 +1,7 @@
 package steam
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -94,5 +95,39 @@ func TestAddShortcut(t *testing.T) {
 	os.WriteFile(ShortcutsFile(root, "4242"), []byte("not vdf"), 0o644)
 	if _, err := AddShortcut(root, "4242", s, backups, now); err == nil {
 		t.Fatal("want an error")
+	}
+}
+
+func TestFindShortcutAndGridArt(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 10, 31, 12, 0, 0, 0, time.UTC)
+	exe := `C:\Games\Reclaimed\Reclaimed.exe`
+	if _, found, err := FindShortcut(root, "4242", exe); found || err != nil {
+		t.Fatal(found, err)
+	}
+	AddShortcut(root, "4242", Shortcut{Name: "Reclaimed", Exe: exe, StartDir: `C:\Games\Reclaimed`}, t.TempDir(), now)
+	id, found, err := FindShortcut(root, "4242", `c:\games\reclaimed\RECLAIMED.exe`)
+	if !found || err != nil || id != ShortcutAppID(`"`+exe+`"`, "Reclaimed") {
+		t.Fatal(id, found, err)
+	}
+
+	grid := filepath.Join(root, "userdata", "4242", "config", "grid")
+	os.MkdirAll(grid, 0o755)
+	custom := filepath.Join(grid, fmt.Sprintf("%dp.png", id)) // the player's own cover
+	os.WriteFile(custom, []byte("mine"), 0o644)
+	n, err := WriteGridArt(root, "4242", id)
+	if err != nil || n != 3 {
+		t.Fatal(n, err)
+	}
+	if b, _ := os.ReadFile(custom); string(b) != "mine" {
+		t.Fatal("the player's cover was replaced")
+	}
+	for _, name := range []string{"%d.jpg", "%d_hero.jpg", "%d_logo.png"} {
+		if st, err := os.Stat(filepath.Join(grid, fmt.Sprintf(name, id))); err != nil || st.Size() < 1000 {
+			t.Fatal(name, err)
+		}
+	}
+	if n, _ := WriteGridArt(root, "4242", id); n != 0 {
+		t.Fatal("wrote again:", n)
 	}
 }

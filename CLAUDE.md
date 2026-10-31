@@ -71,6 +71,12 @@ See README.md for the folder layout, update-conflict rules, and code map.
   Self-update (`internal/selfupdate`): banner + Update now, verified against the release's
   SHA256SUMS.txt, running exe renamed to `.old`, new one started with `--after-update <pid>`
   (main waits for the old process because of the single-instance lock).
+- 0.6.0: Find a friend (search by player name, friends saved in `state.json` via
+  `SetFriends`, friends panel with Join, ★ names, "N friends playing" chip on the Halo 3
+  card; all from the status replies' `player_names`). Add to Steam also writes library art
+  (`internal/steam/art`, made from `build/steam-art/art.html`) into the grid folder as
+  `<appid>p.jpg`, `<appid>.jpg`, `<appid>_hero.jpg`, `<appid>_logo.png`, skipping any slot
+  that already has an image; an existing entry only gets the missing art (Steam can run).
 - v0.4.x is released publicly (Reclaimed.exe + SHA256SUMS.txt); the repo is public.
 - Download page for the owner's non-technical friends: `site/index.html`, served by GitHub
   Pages from the `gh-pages` branch at https://tman-comps.github.io/Reclaimed-Launcher/. After

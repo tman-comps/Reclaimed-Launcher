@@ -139,6 +139,7 @@ function tileHTML(g) {
   else if (g.installed && g.latest && !g.updateAvailable && g.versionSource !== "" ) chips.push(`<span class="chip ok">Up to date</span>`);
   if (g.linked) chips.push(`<span class="chip accent" title="${esc(g.dir)}">Linked folder</span>`);
   chips.push(serverChip(g.id));
+  if (g.id === "reclaimer") chips.push(friendsChip());
 
   const top = [];
   if (!g.requirementOk) top.push(`<span class="chip bad">Needs ${esc(g.needsName)}</span>`);
@@ -288,7 +289,28 @@ function renderTiles() {
 // ---------------------------------------------------------------- pages
 // Project Reclaimer's server browser. Built once, so typing, ticks and scroll
 // survive redraws; only the rows and the status line are redrawn.
-const sb = { el: null, list: null, q: "", hideEmpty: false, hideFull: false, hidePw: false, open: null };
+const sb = { el: null, list: null, q: "", hideEmpty: false, hideFull: false, hidePw: false, onlyFriends: false, open: null, friends: [] };
+
+// ---- friends: player names to look for on Project Reclaimer servers.
+const friendKey = (n) => n.trim().toLowerCase();
+const isFriend = (n) => sb.friends.some((f) => friendKey(f) === friendKey(n));
+// Friends playing right now, with the server each is on.
+function friendsOnline() {
+  const out = [], seen = new Set(); // a name on two servers counts once (lists are sorted busiest first)
+  for (const s of sb.list?.servers || []) for (const n of s.playerNames || []) {
+    if (isFriend(n) && !seen.has(friendKey(n))) { seen.add(friendKey(n)); out.push({ name: n, server: s }); }
+  }
+  return out;
+}
+async function setFriends(list) {
+  sb.friends = (await call("SetFriends", list).catch(() => null)) ?? sb.friends;
+  if (sb.el) { sbFriends(); sbRows(); }
+  renderTiles();
+}
+function friendsChip() {
+  const n = sb.friends.length ? friendsOnline().length : 0;
+  return n ? `<span class="chip ok" title="${esc(friendsOnline().map((f) => `${f.name}: ${f.server.name}`).join("\n"))}">★ ${n} friend${n === 1 ? "" : "s"} playing</span>` : "";
+}
 
 function renderServers() {
   if (!sb.el) {
@@ -297,11 +319,13 @@ function renderServers() {
       <div class="card">
         <div class="row"><h3 style="flex:1">Project Reclaimer</h3><span class="muted" id="sbStatus"></span>
           <button class="btn small" data-act="sb-refresh" id="sbRefresh">Refresh</button></div>
+        <div id="sbFriends" class="sb-friends"></div>
         <div class="row sb-tools">
-          <input id="sbSearch" type="search" placeholder="Search server, map or mode" autocomplete="off" spellcheck="false">
+          <input id="sbSearch" type="search" placeholder="Search server, map, mode or player" autocomplete="off" spellcheck="false">
           <label><input type="checkbox" id="sbEmpty"> Hide empty</label>
           <label><input type="checkbox" id="sbFull"> Hide full</label>
           <label><input type="checkbox" id="sbPw"> Hide password-protected</label>
+          <label><input type="checkbox" id="sbOnlyFriends"> Only with friends</label>
         </div>
         <div class="sb-list">
           <div class="sb-row sb-head"><div>Server</div><div>Map</div><div>Mode</div><div>Players</div><div>Ping</div><div></div></div>
@@ -315,10 +339,10 @@ function renderServers() {
       </div>
       <div class="card">
         <h3>Reach Renaissance</h3>
-        <p>Servers are listed in-game under Matchmaking. There's no public list the launcher can read yet.</p>
+        <p id="sbReach"></p>
       </div>`;
     $("#sbSearch", sb.el).oninput = (e) => { sb.q = e.target.value.trim().toLowerCase(); sbRows(); };
-    for (const [id, k] of [["sbEmpty", "hideEmpty"], ["sbFull", "hideFull"], ["sbPw", "hidePw"]]) {
+    for (const [id, k] of [["sbEmpty", "hideEmpty"], ["sbFull", "hideFull"], ["sbPw", "hidePw"], ["sbOnlyFriends", "onlyFriends"]]) {
       $(`#${id}`, sb.el).onchange = (e) => { sb[k] = e.target.checked; sbRows(); };
     }
     $("#sbAddr", sb.el).onkeydown = (e) => { if (e.key === "Enter") sbJoin(e.target.value.trim()); };
@@ -330,8 +354,30 @@ function renderServers() {
     });
     $("#serversBody").replaceChildren(sb.el);
     sbRows();
+    sbFriends();
   }
+  const rp = snap.population?.["reach-renaissance"];
+  $("#sbReach", sb.el).textContent = (rp ? `${plural(rp.servers, "server")} online · ${plural(rp.players, "player")}. ` : "") +
+    "Join them from Reach Renaissance's own server browser: it has no way for the launcher to join for you.";
   sbStatus();
+}
+
+// Friends online (with Join) and the saved list (with remove), plus Add.
+function sbFriends() {
+  const box = $("#sbFriends", sb.el);
+  const on = friendsOnline(), onNames = new Set(on.map((f) => friendKey(f.name)));
+  const off = sb.friends.filter((f) => !onNames.has(friendKey(f)));
+  box.innerHTML = `
+    <div class="row sb-friends-head"><b>Friends</b>
+      <input id="sbFriendName" placeholder="Add a friend's in-game name" autocomplete="off" spellcheck="false" maxlength="64">
+      <button class="btn small" data-act="friend-add">Add</button>
+      <span class="muted">${sb.friends.length ? "" : "Add the names your friends play under to see which server they're on."}</span></div>
+    ${on.length ? `<div class="sb-friends-on">${on.map((f) => `<div class="sb-friend"><span class="star">★</span><b>${esc(f.name)}</b>
+      <span class="muted">on ${esc(f.server.name)} · ${esc(f.server.map)} · ${f.server.players}/${f.server.capacity}</span>
+      <button class="btn small primary" data-act="sb-join" data-addr="${esc(f.server.address)}">Join</button></div>`).join("")}</div>` : ""}
+    ${off.length ? `<div class="sb-friends-off"><span class="muted">${sb.list?.done ? "Not playing right now:" : "Not seen yet:"}</span>
+      ${off.map((n) => `<span class="sb-fchip">${esc(n)}<button data-act="friend-remove" data-name="${esc(n)}" title="Remove ${esc(n)}" aria-label="Remove ${esc(n)}">✕</button></span>`).join("")}</div>` : ""}`;
+  $("#sbFriendName", box).onkeydown = (e) => { if (e.key === "Enter") act("friend-add"); };
 }
 
 function sbStatus() {
@@ -345,8 +391,12 @@ function sbStatus() {
 function sbVisible() {
   const L = sb.list?.servers || [];
   return L.filter((s) => (!sb.hideEmpty || s.players > 0) && (!sb.hideFull || s.players < s.capacity) && (!sb.hidePw || !s.passwordRequired) &&
-    (!sb.q || `${s.name} ${s.hostName} ${s.map} ${s.mode} ${s.variant} ${s.address}`.toLowerCase().includes(sb.q)));
+    (!sb.onlyFriends || (s.playerNames || []).some(isFriend)) &&
+    (!sb.q || `${s.name} ${s.hostName} ${s.map} ${s.mode} ${s.variant} ${s.address}`.toLowerCase().includes(sb.q) || sbMatchNames(s).length));
 }
+
+// Players on s whose name matches the search.
+const sbMatchNames = (s) => sb.q ? (s.playerNames || []).filter((n) => n.toLowerCase().includes(sb.q)) : [];
 
 function sbRows() {
   const box = $("#sbRows", sb.el);
@@ -359,8 +409,12 @@ function sbRows() {
   const players = rows.reduce((n, s) => n + s.players, 0);
   box.innerHTML = rows.map((s) => {
     const full = s.players >= s.capacity, open = sb.open === s.address;
+    const friends = (s.playerNames || []).filter(isFriend), found = sbMatchNames(s).filter((n) => !isFriend(n));
+    const who = [...friends.map((n) => `★ ${esc(n)}`), ...found.map(esc)];
+    const sub = who.length ? `<span class="who">${who.slice(0, 4).join(", ")}${who.length > 4 ? ` +${who.length - 4}` : ""}</span>`
+      : s.hostName ? `<span class="muted">${esc(s.hostName)}</span>` : "";
     return `<div class="sb-row${open ? " open" : ""}" data-addr="${esc(s.address)}" title="Click for details">
-      <div class="n"><b>${s.passwordRequired ? `<span class="tag" title="Needs a password to join">Password</span>` : ""}${esc(s.name)}</b>${s.hostName ? `<span class="muted">${esc(s.hostName)}</span>` : ""}</div>
+      <div class="n"><b>${s.passwordRequired ? `<span class="tag" title="Needs a password to join">Password</span>` : ""}${esc(s.name)}</b>${sub}</div>
       <div>${esc(s.map)}</div>
       <div>${esc(s.mode)}</div>
       <div class="${full ? "full" : s.players ? "live" : "muted"}">${s.players} / ${s.capacity}</div>
@@ -371,7 +425,8 @@ function sbRows() {
         <dt>Address</dt><dd>${esc(s.address)}</dd>
         <dt>Game type</dt><dd>${esc(s.variant || s.mode)}</dd>
         <dt>Version</dt><dd>${esc(s.version || "—")}${s.mods ? ` · ${s.mods} mod${s.mods > 1 ? "s" : ""}` : ""}</dd>
-        <dt>Players</dt><dd>${s.playerNames?.length ? s.playerNames.map(esc).join(", ") : "None right now"}</dd>
+        <dt>Host</dt><dd>${esc(s.hostName || "—")}</dd>
+        <dt>Players</dt><dd>${s.playerNames?.length ? `<div class="sb-names">${s.playerNames.map((n) => `<button class="sb-name${isFriend(n) ? " friend" : ""}" data-act="friend-toggle" data-name="${esc(n)}" title="${isFriend(n) ? "Remove from friends" : "Add to friends"}">${isFriend(n) ? "★" : "☆"} ${esc(n)}</button>`).join("")}</div>` : "None right now"}</dd>
       </dl></div>` : ""}`;
   }).join("") + `<p class="muted sb-empty">${rows.length} server${rows.length > 1 ? "s" : ""} · ${players} player${players === 1 ? "" : "s"}</p>`;
 }
@@ -677,6 +732,18 @@ async function act(name, id, el) {
     case "sb-refresh": return api.RefreshServerList();
     case "sb-join": return sbJoin(el.dataset.addr);
     case "sb-direct": return sbJoin($("#sbAddr").value.trim());
+    case "friend-add": {
+      const inp = $("#sbFriendName"), n = inp?.value.trim();
+      if (!n) return inp?.focus();
+      if (isFriend(n)) return toast(`${n} is already a friend.`);
+      inp.value = "";
+      return setFriends([...sb.friends, n]);
+    }
+    case "friend-remove": return setFriends(sb.friends.filter((f) => friendKey(f) !== friendKey(el.dataset.name)));
+    case "friend-toggle": {
+      const n = el.dataset.name;
+      return setFriends(isFriend(n) ? sb.friends.filter((f) => friendKey(f) !== friendKey(n)) : [...sb.friends, n]);
+    }
     case "gs-tab":
       gs.id = id;
       if (id === "sync") gs.compare = null; // always compare the files as they are now
@@ -728,7 +795,9 @@ async function addToSteam(restart) {
       <p class="muted">Close any game you're playing first.</p>
       <div class="row" style="margin-top:16px"><span class="spacer"></span><button class="btn small" data-act="modal-close">Cancel</button><button class="btn small primary" data-act="steam-restart">Restart Steam and add</button></div>`);
   }
-  toast(r.status === "exists" ? "Reclaimed is already in your Steam library." : "Added to Steam. Find Reclaimed in your Library (non-Steam games show up there too).", "ok");
+  toast(r.status === "added" ? "Added to Steam, with its library artwork. Find Reclaimed in your Steam Library."
+    : r.art ? "Reclaimed was already in Steam; added its library artwork. Restart Steam to see it."
+    : "Reclaimed is already in your Steam library.", "ok");
 }
 
 function wire() {
@@ -771,7 +840,11 @@ function wire() {
 
   rt.EventsOn("snapshot", (s) => { snap = s; render(); });
   rt.EventsOn("discovery", (d) => { if (snap) { snap.discovery = d; renderTiles(); } });
-  rt.EventsOn("servers", (l) => { sb.list = l; if (sb.el) { sbRows(); sbStatus(); } });
+  rt.EventsOn("servers", (l) => {
+    sb.list = l;
+    if (sb.el) { sbRows(); sbStatus(); if (l.done) sbFriends(); }
+    if (l.done && sb.friends.length) renderTiles();
+  });
   rt.EventsOn("launcher-update", (p) => {
     selfUpdateText = p.total > 0 ? `${Math.floor((p.done / p.total) * 100)}%` : "Downloading…";
     renderBanners();
@@ -811,6 +884,12 @@ async function boot() {
   wire();
   snap = await api.Snapshot();
   render();
+  // The friends list, and any server list the background browse already has.
+  [sb.friends, sb.list] = await Promise.all([api.Friends().catch(() => []), api.ServerList().catch(() => null)]);
+  sb.friends ||= [];
+  if (sb.list && !sb.list.asked) sb.list = null; // no browse has started yet
+  renderTiles();
+  if (sb.el) { sbRows(); sbStatus(); sbFriends(); }
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

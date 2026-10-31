@@ -28,7 +28,7 @@ import (
 )
 
 // Version of the launcher itself.
-const Version = "0.5.1"
+const Version = "0.6.0"
 
 const userAgent = "ReclaimedLauncher/" + Version
 
@@ -722,12 +722,15 @@ func (a *App) CreateDesktopShortcut() (string, error) {
 // "steam-running" (nothing written; ask before restarting Steam).
 type SteamResult struct {
 	Status string `json:"status"`
+	Art    int    `json:"art"` // library images written
 }
 
-// AddToSteam adds Reclaimed to the Steam library as a non-Steam game (the
-// owner allowed this write to Steam's shortcut list, which is backed up to
-// data\backups\steam first). Steam must be closed while the list is
-// written; with restartSteam it's shut down, then started again afterwards.
+// AddToSteam adds Reclaimed to the Steam library as a non-Steam game, with
+// its library art (the owner allowed these writes to Steam's shortcut list,
+// backed up to data\backups\steam first, and its grid folder). Steam must be
+// closed while the list is written; with restartSteam it's shut down, then
+// started again afterwards. If Reclaimed is already there, only missing art
+// is added, which works while Steam runs.
 func (a *App) AddToSteam(restartSteam bool) (SteamResult, error) {
 	root := a.MCC().SteamPath
 	if root == "" {
@@ -740,6 +743,10 @@ func (a *App) AddToSteam(restartSteam bool) (SteamResult, error) {
 	exe, err := a.exe()
 	if err != nil {
 		return SteamResult{}, err
+	}
+	if id, found, _ := steam.FindShortcut(root, user, exe); found {
+		n := a.steamArt(root, user, id)
+		return SteamResult{Status: "exists", Art: n}, nil
 	}
 	steamExe := filepath.Join(root, "steam.exe")
 	wasRunning := steamRunning(root)
@@ -759,6 +766,12 @@ func (a *App) AddToSteam(restartSteam bool) (SteamResult, error) {
 	}
 	added, err := steam.AddShortcut(root, user, steam.Shortcut{Name: "Reclaimed", Exe: exe, StartDir: filepath.Dir(exe), Icon: exe},
 		filepath.Join(a.L.Data, "backups", "steam"), time.Now())
+	res := SteamResult{Status: "added"}
+	if err == nil {
+		if id, found, _ := steam.FindShortcut(root, user, exe); found {
+			res.Art = a.steamArt(root, user, id)
+		}
+	}
 	if wasRunning {
 		proc.Launch(steamExe)
 	}
@@ -768,9 +781,20 @@ func (a *App) AddToSteam(restartSteam bool) (SteamResult, error) {
 	}
 	runtime.LogInfof(a.ctx, "add to Steam: added=%v", added)
 	if !added {
-		return SteamResult{Status: "exists"}, nil
+		res.Status = "exists"
 	}
-	return SteamResult{Status: "added"}, nil
+	return res, nil
+}
+
+// steamArt writes the library art for the shortcut; failures are only logged.
+func (a *App) steamArt(root, user string, appID uint32) int {
+	n, err := steam.WriteGridArt(root, user, appID)
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "steam library art: %v", err)
+	} else {
+		runtime.LogInfof(a.ctx, "steam library art: %d image(s) for %d", n, appID)
+	}
+	return n
 }
 
 func steamRunning(root string) bool {
@@ -815,3 +839,9 @@ func (a *App) UpdateLauncher() error {
 	runtime.Quit(a.ctx)
 	return nil
 }
+
+// Friends returns the saved friend names for the server browser.
+func (a *App) Friends() []string { return a.store.Friends() }
+
+// SetFriends saves the friend names and returns them as stored.
+func (a *App) SetFriends(names []string) ([]string, error) { return a.store.SetFriends(names) }

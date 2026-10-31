@@ -1,6 +1,7 @@
 package steam
 
 import (
+	"embed"
 	"errors"
 	"fmt"
 	"hash/crc32"
@@ -159,4 +160,78 @@ func AddShortcut(root, user string, s Shortcut, backupDir string, now time.Time)
 		return false, err
 	}
 	return true, nil
+}
+
+// FindShortcut returns the Steam ID of the user's non-Steam game that starts
+// exe, if there is one. It only reads, so Steam may be running.
+func FindShortcut(root, user, exe string) (appID uint32, found bool, err error) {
+	data, err := os.ReadFile(ShortcutsFile(root, user))
+	if errors.Is(err, os.ErrNotExist) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+	doc, err := vdf.ParseBinary(data)
+	if err != nil {
+		return 0, false, err
+	}
+	list := doc.Child("shortcuts")
+	if list == nil {
+		return 0, false, nil
+	}
+	for _, e := range list.Children {
+		x := e.Child("Exe")
+		if x == nil || !strings.EqualFold(strings.Trim(x.Str, `"`), exe) {
+			continue
+		}
+		if id := e.Child("appid"); id != nil && id.Int != 0 {
+			return id.Int, true, nil
+		}
+		name := ""
+		if n := e.Child("AppName"); n != nil {
+			name = n.Str
+		}
+		return ShortcutAppID(x.Str, name), true, nil // older entries without an appid
+	}
+	return 0, false, nil
+}
+
+//go:embed art
+var gridArt embed.FS
+
+// gridFiles maps the launcher's art to Steam's grid file names: library
+// cover, wide capsule, page header and the logo drawn over it.
+var gridFiles = []struct{ src, suffix string }{
+	{"art/portrait.jpg", "p"},
+	{"art/wide.jpg", ""},
+	{"art/hero.jpg", "_hero"},
+	{"art/logo.png", "_logo"},
+}
+
+// WriteGridArt gives the non-Steam game appID the launcher's library art,
+// in the user's Steam grid folder. A slot that already has an image (set by
+// the player or a tool) is left alone. It returns how many images it wrote.
+func WriteGridArt(root, user string, appID uint32) (int, error) {
+	dir := filepath.Join(root, "userdata", user, "config", "grid")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return 0, err
+	}
+	id := strconv.FormatUint(uint64(appID), 10)
+	n := 0
+	for _, f := range gridFiles {
+		base := id + f.suffix
+		if m, _ := filepath.Glob(filepath.Join(dir, base+".*")); len(m) > 0 {
+			continue
+		}
+		data, err := gridArt.ReadFile(f.src)
+		if err != nil {
+			return n, err
+		}
+		if err := os.WriteFile(filepath.Join(dir, base+filepath.Ext(f.src)), data, 0o644); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
 }

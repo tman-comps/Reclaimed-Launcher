@@ -49,6 +49,8 @@
     population: scenario === "nomcc" ? {} : { reclaimer: { servers: 322, players: 1187, at: now }, "reach-renaissance": { servers: 8, players: 33, at: now } },
     discovery: scenario === "nomcc" ? { ok: false, error: "both endpoints timed out", fetchedAt: now } : { ok: true, servers: 17, masters: 2, endpoint: "http://148.251.153.44:49175/v3/discovery", fetchedAt: now },
   };
+  const tags = ["NoobSlayer", "WartHogWill", "GruntBirthday", "SpartanSam", "NeedlerNed", "ScarabSue", "BanshEEbob", "Plasma Pat", "Sticky Rick", "ODST_Olly", "MongooseMo", "ElitesOnly"];
+  let friends = scenario === "friends" ? ["SpartanSam", "Sticky Rick", "Cortana2"] : [];
   // Server browser rows, shaped like real status replies (docs/server-browser.md).
   const servers = [
     ["Example | Big Team Battle 64 Player", "Example Host", "Valhalla", "Capture the Flag", 58, 64, 41],
@@ -59,7 +61,7 @@
     ["Private scrims", "", "Construct", "Slayer", 3, 8, 88, true],
   ].map(([name, hostName, map, mode, players, capacity, pingMs, pw], i) => ({
     address: `10.0.0.${i + 1}:4917${i}`, name, hostName, map, mode, variant: mode, players, capacity, pingMs,
-    passwordRequired: !!pw, version: "0.9.23", mods: i === 0 ? 1 : 0, playerNames: Array.from({ length: Math.min(players, 6) }, (_, j) => `Player${j + 1}`),
+    passwordRequired: !!pw, version: "0.9.23", mods: i === 0 ? 1 : 0, playerNames: Array.from({ length: Math.min(players, 8) }, (_, j) => tags[(i * 8 + j) % tags.length]),
   }));
   let serverList = null;
   const opts = (...vs) => vs.map((v) => (Array.isArray(v) ? { value: v[0], label: v[1] } : { value: String(v), label: String(v) }));
@@ -138,6 +140,8 @@
     CreateDesktopShortcut: async () => "C:\\Users\\you\\Desktop\\Reclaimed.lnk",
     AddToSteam: async (restart) => ({ status: restart ? "added" : "steam-running" }),
     UpdateLauncher: async () => { snap.launcher.updating = true; emit("snapshot", structuredClone(snap)); let d = 0; const t = setInterval(() => { d += 0.1; emit("launcher-update", { done: d * 15e6, total: 15e6 }); if (d >= 1) clearInterval(t); }, 150); },
+    Friends: async () => [...friends],
+    SetFriends: async (l) => (friends = [...new Set(l.map((n) => n.trim()).filter(Boolean))]),
     JoinServer: async (addr) => { if (!/^[A-Za-z0-9.-]{1,253}:\d{1,5}$/.test(addr)) throw "enter the server's address as host:port"; },
   };
   window.go = { main: { App: A } };

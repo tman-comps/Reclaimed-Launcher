@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -30,6 +31,9 @@ type State struct {
 	// FirstRunDone lists games whose first-run settings were applied
 	// (settings.ApplyFirstRun), so they're never applied twice.
 	FirstRunDone map[string]bool `json:"firstRunDone,omitempty"`
+	// Friends are Project Reclaimer player names the server browser
+	// looks for.
+	Friends []string `json:"friends,omitempty"`
 }
 
 // Store guards State and saves it atomically.
@@ -86,6 +90,29 @@ func (st *Store) SetFirstRunDone(id string) error {
 		}
 		s.FirstRunDone[id] = true
 	})
+}
+
+// Friends returns the saved friend names.
+func (st *Store) Friends() []string {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	return append([]string{}, st.s.Friends...)
+}
+
+// SetFriends saves the friend names: trimmed, without blanks or
+// case-insensitive duplicates, in the given order, at most 200.
+func (st *Store) SetFriends(names []string) ([]string, error) {
+	var out []string
+	seen := map[string]bool{}
+	for _, n := range names {
+		n = strings.TrimSpace(n)
+		if n == "" || len(n) > 64 || seen[strings.ToLower(n)] || len(out) >= 200 {
+			continue
+		}
+		seen[strings.ToLower(n)] = true
+		out = append(out, n)
+	}
+	return out, st.Update(func(s *State) { s.Friends = out })
 }
 
 // MCCPath returns the manual MCC override.

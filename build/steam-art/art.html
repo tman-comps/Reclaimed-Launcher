@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #06090d; font-family: "Bahnschrift", "Segoe UI", sans-serif; color: #e9eef5; }
+  html.logo, html.logo body { background: transparent; }
+  .layer { position: absolute; inset: 0; overflow: hidden; }
+  .layer img { position: absolute; }
+  .shade { position: absolute; inset: 0; }
+  .seam { position: absolute; inset: 0; background: #5cc8ff; opacity: .9; }
+  .mark { position: absolute; display: flex; align-items: center; gap: var(--gap); left: 0; right: 0; justify-content: center; }
+  .mark img { width: var(--icon); height: var(--icon); filter: drop-shadow(0 4px 14px rgba(0,0,0,.6)); }
+  .word { font-weight: 700; letter-spacing: .3em; font-size: var(--size); margin-right: -.3em; text-shadow: 0 4px 24px rgba(0,0,0,.75); }
+  .sub { position: absolute; left: 0; right: 0; text-align: center; color: #5cc8ff; letter-spacing: .32em; font-weight: 700; font-size: var(--subsize); text-shadow: 0 2px 12px rgba(0,0,0,.8); }
+</style></head>
+<body>
+<script>
+const k = new URLSearchParams(location.search).get("k");
+const W = innerWidth, Ht = innerHeight;
+const H = (s) => document.body.insertAdjacentHTML("beforeend", s);
+// Two halves split by a slanted seam: Master Chief (Project Reclaimer's cover)
+// and the Spartan on the cliff (Reach Renaissance's), placed so the covers'
+// own titles stay out of frame.
+function split(a, b, clipB, seam, shade) {
+  H(`<div class="layer">${a}</div><div class="layer" style="clip-path:${clipB}">${b}</div>
+     <div class="seam" style="clip-path:${seam}"></div><div class="shade" style="background:${shade}"></div>`);
+}
+if (k === "logo") {
+  document.documentElement.className = "logo";
+  H(`<div class="mark" style="top:50%;transform:translateY(-50%);--gap:34px;--icon:190px;--size:118px"><img src="appicon.png"><span class="word">RECLAIMED</span></div>`);
+} else if (k === "portrait") {
+  split(`<img src="reclaimer-tall.webp" style="inset:0;width:100%;height:100%;object-fit:cover">`,
+        `<img src="reach-renaissance-tall.png" style="inset:0;width:100%;height:100%;object-fit:cover">`,
+        "polygon(0 52%, 100% 36%, 100% 100%, 0 100%)", "polygon(0 51.6%, 100% 35.6%, 100% 36.4%, 0 52.4%)",
+        "linear-gradient(rgba(6,9,13,0) 55%, rgba(6,9,13,.85) 88%)");
+  H(`<div class="mark" style="bottom:118px;--gap:16px;--icon:64px;--size:52px"><img src="appicon.png"><span class="word">RECLAIMED</span></div>
+     <div class="sub" style="bottom:72px;--subsize:17px">HALO 3 · HALO: REACH</div>`);
+} else {
+  // Wide covers are 920x430. Reclaimer: Chief at x 5-45%, title right of
+  // that. Reach: Spartan and planet at x 5-48%, title on the right half, so
+  // it's scaled up and its left part moved to the right of the seam.
+  // Both covers fade to a dark band below 76% of their height; keep it out.
+  const rw = W * 1.28, rh = rw * 430 / 920, ry = Math.max(-(rh * 0.70 - Ht * 0.62), Ht - rh * 0.76);
+  const lh = Math.max(Ht / 0.76, W * 430 / 920), lw = lh * 920 / 430;
+  split(`<img src="reclaimer-wide.webp" style="left:0;top:${Math.max((Ht - lh) / 2, Ht - lh * 0.76)}px;width:${lw}px;height:${lh}px">`,
+        `<img src="reach-renaissance-wide.png" style="left:${W * 0.386}px;top:${ry}px;width:${rw}px;height:${rh}px">`,
+        "polygon(46% 0, 100% 0, 100% 100%, 38% 100%)", "polygon(45.7% 0, 46.3% 0, 38.3% 100%, 37.7% 100%)",
+        k === "hero" ? "linear-gradient(rgba(6,9,13,.1), rgba(6,9,13,.45))" : "linear-gradient(rgba(6,9,13,0) 40%, rgba(6,9,13,.85))");
+  if (k === "wide") H(`<div class="mark" style="bottom:56px;--gap:16px;--icon:62px;--size:50px"><img src="appicon.png"><span class="word">RECLAIMED</span></div>`);
+}
+</script>
+</body></html>
