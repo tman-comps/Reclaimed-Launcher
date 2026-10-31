@@ -130,5 +130,17 @@ The game's menu posts `join:<id or address>|<masters>` to its own launcher
 program (`Reach Renaissance.exe`), which starts its helpers with
 `--join {id}`. That is internal: no URL scheme is registered, the README
 documents no command line, and the exe's `--join`, `--browse`, `--follow`
-strings are arguments it builds for its own helpers. Whether
-`Reach Renaissance.exe --join <id>` from outside works is untested.
+strings are arguments it builds for its own helpers.
+
+Tested 2026-10-30: `Reach Renaissance.exe --join <id>` from outside does
+not join. The exe took the id as the MCC folder and showed "Cannot read
+<id>\haloreach\haloreach.dll ... Is Halo: Reach installed in MCC?".
+
+Each run's `%LOCALAPPDATA%\ReachRenaissance\runs\<time>\join-args.txt`
+holds the engine's own command line (`--join {master} {id}` plus a
+per-run `--profile`, `--user-id` and `--mcc`). Replaying it would bypass
+Reach Renaissance's launcher and checks, so the launcher doesn't.
+
+Decision (2026-10-30): no Reach server list or Join for now. Revisit if
+Reach Renaissance adds a supported join link like Reclaimer's
+`reclaimer://join/`.
