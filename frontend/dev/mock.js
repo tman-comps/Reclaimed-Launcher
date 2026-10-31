@@ -44,27 +44,57 @@
     Object.assign(games[1], { artTall: `${art}/reach-renaissance-tall.png`, artWide: `${art}/reach-renaissance-wide.png` });
   }
   const snap = {
-    launcher: { version: "0.3.0", root: "C:\\Games\\Reclaimed" }, mcc, games, checking: false,
+    launcher: { version: "0.4.0", root: "C:\\Games\\Reclaimed" }, mcc, games, checking: false,
     discovery: scenario === "nomcc" ? { ok: false, error: "both endpoints timed out", fetchedAt: now } : { ok: true, servers: 17, masters: 2, endpoint: "http://148.251.153.44:49175/v3/discovery", fetchedAt: now },
   };
   // Server browser rows, shaped like real status replies (docs/server-browser.md).
   const servers = [
-    ["DaBois | Hugegrass 120 Player (Updated)", "Juices Server", "Hugegrass · Custom", "Capture the Flag", 99, 120, 61],
-    ["!Vote ANY map anytime | TS BR | FFA | Infection", "", "Guardian", "Slayer", 2, 124, 29],
-    ["[IBIGS.us] WL Custom Maps", "IBIGS.us", "Sandbox", "VIP", 16, 16, 44],
-    ["Ellis Box | Big Team Battle 24/7", "", "Valhalla", "Slayer", 0, 126, 62],
-    ["EU | Jlab Systems | Team Slayer 4v4", "Jlab Systems", "Guardian", "Slayer", 0, 8, 174],
-    ["Private scrims", "", "The Pit", "Slayer", 3, 8, 88, true],
+    ["Example | Big Team Battle 64 Player", "Example Host", "Valhalla", "Capture the Flag", 58, 64, 41],
+    ["Vote any map | Team Slayer | FFA | Infection", "", "Guardian", "Slayer", 14, 16, 29],
+    ["Custom Maps Weekend", "Sample Community", "Sandbox", "VIP", 12, 16, 44],
+    ["US East | Snipers Only", "", "Narrows", "Slayer", 6, 12, 62],
+    ["EU | Team Slayer 4v4", "", "The Pit", "Slayer", 0, 8, 174],
+    ["Private scrims", "", "Construct", "Slayer", 3, 8, 88, true],
   ].map(([name, hostName, map, mode, players, capacity, pingMs, pw], i) => ({
     address: `10.0.0.${i + 1}:4917${i}`, name, hostName, map, mode, variant: mode, players, capacity, pingMs,
     passwordRequired: !!pw, version: "0.9.23", mods: i === 0 ? 1 : 0, playerNames: Array.from({ length: Math.min(players, 6) }, (_, j) => `Player${j + 1}`),
   }));
   let serverList = null;
+  const opts = (...vs) => vs.map((v) => (Array.isArray(v) ? { value: v[0], label: v[1] } : { value: String(v), label: String(v) }));
+  const fov = opts(70, 78, 85, 90, 95, 100, 110, 120);
+  const onOff = opts(["on", "On"], ["off", "Off"]);
+  const pct = opts(0, 25, 50, 75, 100);
   const page = (game) => game === "reclaimer"
     ? { game, path: "C:\\Users\\you\\Documents\\My Games\\Project Reclaimer\\settings.json", stamp: "x", note: "Settings not shown here are left as they are.",
-        fields: [{ key: "field_of_view", label: "Field of view", group: "Video", value: "85", options: ["70", "78", "85", "90"].map((v) => ({ value: v, label: v })) }] }
+        fields: [
+          { key: "graphics.display_mode", label: "Window mode", group: "Video", value: "borderless", options: opts(["windowed", "Windowed"], ["borderless", "Borderless"], ["fullscreen", "Fullscreen"]) },
+          { key: "graphics.vsync", label: "V-sync", group: "Video", value: "false", options: opts(["true", "On"], ["false", "Off"]) },
+          { key: "graphics.frame_limit", label: "Frame limit", group: "Video", value: "144", options: opts(30, 60, 120, 144, 165, 240) },
+          { key: "graphics.width", label: "Window width", group: "Video", value: "2560", readOnly: true, note: "Set by resizing the game's window." },
+          { key: "field_of_view", label: "Field of view", group: "Video", value: "95", options: fov },
+          { key: "vehicle_field_of_view", label: "Vehicle field of view", group: "Video", value: "100", options: fov },
+          { key: "audio.master_volume", label: "Master volume", group: "Audio", value: "75", options: pct },
+          { key: "audio.mute_unfocused", label: "Mute in the background", group: "Audio", value: "true", options: opts(["true", "On"], ["false", "Off"]) },
+        ] }
     : { game, path: "C:\\Users\\you\\AppData\\Local\\ReachRenaissance\\settings.txt", stamp: "y",
-        fields: [{ key: "fov", label: "Field of view", group: "Video", value: "90", options: ["70", "78", "85", "90"].map((v) => ({ value: v, label: v })) }] };
+        fields: [
+          { key: "display", label: "Window mode", group: "Video", value: "fullscreen", options: opts(["windowed", "Windowed"], ["borderless", "Borderless"], ["fullscreen", "Fullscreen"]) },
+          { key: "fov", label: "Field of view", group: "Video", value: "90", options: fov },
+          { key: "fps", label: "Framerate limit", group: "Video", value: "144", options: opts(["0", "Unlimited"], 60, 120, 144, 240) },
+          { key: "vsync", label: "V-sync", group: "Video", value: "off", options: onOff },
+          { key: "gfx.preset", label: "Graphics quality", group: "Graphics", value: "enhanced", options: opts(["original", "Original"], ["enhanced", "Enhanced"], ["custom", "Custom"]) },
+          { key: "gfx.shadows", label: "Shadow quality", group: "Graphics", value: "high", options: opts(["low", "Low"], ["medium", "Medium"], ["high", "High"]) },
+          { key: "volume.game", label: "Game volume", group: "Audio", value: "100", options: pct },
+        ] };
+  const side = (value, label, canCopy = true) => ({ value, label, canCopy });
+  const compareRows = [
+    ["fov", "Field of view", side("95", "95"), side("90", "90")],
+    ["fov.vehicle", "Vehicle / third-person field of view", side("100", "100"), side("78", "78")],
+    ["fps", "Frame limit", side("144", "144"), side("144", "144")],
+    ["vsync", "V-sync", side("false", "Off"), side("off", "Off")],
+    ["display", "Window mode", side("borderless", "Borderless"), side("fullscreen", "Fullscreen")],
+    ["volume", "Volume", side("75", "75%"), side("100", "100%")],
+  ].map(([key, label, a, b]) => ({ key, label, same: a.label === b.label, sides: { reclaimer: a, "reach-renaissance": b } }));
   const emit = (n, d) => (handlers[n] || []).forEach((f) => f(d));
   window.runtime = {
     EventsOn: (n, f) => { (handlers[n] ||= []).push(f); },
@@ -88,8 +118,7 @@
     OpenArtFolder: async () => {}, ExportSettingsReport: async () => "C:\\Games\\Reclaimed\\reports\\settings-report.txt",
     GameSettings: async (id) => page(id),
     SaveGameSettings: async (id) => ({ page: page(id), backup: "C:\\Games\\Reclaimed\\data\\backups\\x.bak" }),
-    CompareSettings: async () => ({ rows: [{ key: "fov", label: "Field of view", same: false,
-      sides: { reclaimer: { value: "85", label: "85", canCopy: true }, "reach-renaissance": { value: "90", label: "90", canCopy: true } } }] }),
+    CompareSettings: async () => ({ rows: structuredClone(compareRows) }),
     CopySettings: async (from, to) => ({ page: page(to), backup: "x" }), OpenSettingsBackups: async () => {},
     ServerList: async () => serverList,
     RefreshServerList() {
