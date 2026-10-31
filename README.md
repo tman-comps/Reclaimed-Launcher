@@ -15,6 +15,11 @@ server browser for Project Reclaimer and one settings page for both games.
 
 ## Download
 
+**Easiest:** go to **https://tman-comps.github.io/Reclaimed-Launcher/**. It has
+one Download button and step-by-step install help.
+
+Or by hand:
+
 1. Get `Reclaimed.exe` from the [latest release](https://github.com/tman-comps/Reclaimed-Launcher/releases/latest).
 2. Put it in a folder of its own, for example `C:\Games\Reclaimed\`. Don't use
    Program Files or MCC's folder.
